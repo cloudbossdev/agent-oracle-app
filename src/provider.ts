@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { spawn } from 'node:child_process';
 import type { AgentExecutionInput, AgentExecutionResult, AgentProvider } from './types.js';
 
 function sleep(ms: number) {
@@ -51,6 +52,26 @@ export function resolveConfiguredProvider() {
   return new ShellCommandAgentProvider(config);
 }
 
+function validateProviderOutput(payload: unknown): AgentExecutionResult {
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('Shell provider returned invalid JSON: expected an object.');
+  }
+
+  const result = payload as Record<string, unknown>;
+  for (const field of ['summary', 'response', 'risks', 'nextStep']) {
+    if (typeof result[field] !== 'string' || result[field].trim() === '') {
+      throw new Error(`Shell provider returned invalid JSON: missing string field "${field}".`);
+    }
+  }
+
+  return {
+    summary: result.summary as string,
+    response: result.response as string,
+    risks: result.risks as string,
+    nextStep: result.nextStep as string,
+  };
+}
+
 export class MockAgentProvider implements AgentProvider {
   async execute(input: AgentExecutionInput): Promise<AgentExecutionResult> {
     await sleep(200 + input.stepOrder * 120);
@@ -76,7 +97,65 @@ export class ShellCommandAgentProvider implements AgentProvider {
     this.timeoutMs = config.timeoutMs ?? null;
   }
 
-  async execute(): Promise<AgentExecutionResult> {
-    throw new Error('ShellCommandAgentProvider is only a placeholder in this MVP.');
+  async execute(input: AgentExecutionInput): Promise<AgentExecutionResult> {
+    return await new Promise((resolve, reject) => {
+      const child = spawn(this.command, this.args, { stdio: 'pipe' });
+      let stdout = '';
+      let stderr = '';
+      let completed = false;
+      let timeoutHandle: any = null;
+
+      const finish = (callback: () => void) => {
+        if (completed) return;
+        completed = true;
+        if (timeoutHandle) clearTimeout(timeoutHandle);
+        callback();
+      };
+
+      if (this.timeoutMs) {
+        timeoutHandle = setTimeout(() => {
+          finish(() => {
+            child.kill();
+            reject(new Error(`Shell provider timed out after ${this.timeoutMs}ms.`));
+          });
+        }, this.timeoutMs);
+      }
+
+      child.stdout.setEncoding('utf8');
+      child.stderr.setEncoding('utf8');
+
+      child.stdout.on('data', (chunk) => {
+        stdout += chunk;
+      });
+
+      child.stderr.on('data', (chunk) => {
+        stderr += chunk;
+      });
+
+      child.on('error', (error) => {
+        finish(() => reject(new Error(`Shell provider failed to start: ${error.message}`)));
+      });
+
+      child.on('close', (code, signal) => {
+        finish(() => {
+          if (code !== 0) {
+            const detail = stderr.trim() || `exit code ${code}${signal ? `, signal ${signal}` : ''}`;
+            reject(new Error(`Shell provider command failed: ${detail}`));
+            return;
+          }
+
+          try {
+            const parsed = JSON.parse(stdout.trim() || '{}');
+            resolve(validateProviderOutput(parsed));
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            reject(new Error(`Shell provider returned invalid JSON: ${message}`));
+          }
+        });
+      });
+
+      child.stdin.write(input.inputText);
+      child.stdin.end();
+    });
   }
 }
