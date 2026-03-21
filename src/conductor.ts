@@ -1,17 +1,26 @@
 // @ts-nocheck
 import { buildAgentInputMarkdown, buildAgentOutputMarkdown, createRunFolder, writeAgentInput, writeAgentOutput, writeManifest, writeQuestionArtifact } from './artifacts.js';
 import { createRun, createRunSteps, getRunWithSteps, listAgents, recordArtifact, updateRunStatus, updateStep } from './db.js';
-import { MockAgentProvider } from './provider.js';
+import { resolveConfiguredProvider } from './provider.js';
 import { buildPriorContext, buildTask, loadAgentInstruction } from './workflow.js';
 import type { AgentProvider, WorkflowMode } from './types.js';
 
-let provider: AgentProvider = new MockAgentProvider();
+let providerOverride: AgentProvider | null = null;
 
 export function setAgentProvider(nextProvider: AgentProvider) {
-  provider = nextProvider;
+  providerOverride = nextProvider;
+}
+
+export function clearAgentProviderOverride() {
+  providerOverride = null;
+}
+
+function getAgentProvider() {
+  return providerOverride ?? resolveConfiguredProvider();
 }
 
 export async function startRun(questionText: string, workflowMode: WorkflowMode) {
+  getAgentProvider();
   const agents = listAgents();
   const { folderName, folderPath } = createRunFolder();
   const run = createRun(questionText, workflowMode, folderName);
@@ -23,6 +32,7 @@ export async function startRun(questionText: string, workflowMode: WorkflowMode)
 }
 
 async function processRun(runId: number, questionText: string, workflowMode: WorkflowMode, folderPath: string) {
+  const provider = getAgentProvider();
   updateRunStatus(runId, 'preparing');
   const previousOutputs: Array<{ agentName: string; output: string }> = [];
   try {
