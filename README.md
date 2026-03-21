@@ -11,7 +11,7 @@ A simple local-only TypeScript web app that runs a fixed four-agent review workf
 ## Assumptions
 - This is a single-user tool running on one machine.
 - SQLite is available locally via the `sqlite3` CLI.
-- Node.js and the TypeScript compiler are available locally.
+- Node.js and npm are available locally.
 - The app does not need authentication, multi-user coordination, or network services beyond local HTTP.
 
 ## Proposed stack
@@ -96,30 +96,82 @@ Covered checks:
 - markdown artifact creation
 - final synthesis persistence
 
-## README with run instructions
-### Run locally
-1. Build the TypeScript sources:
+## Local setup
+### Prerequisites
+- Node.js 24 or newer
+- npm
+- SQLite CLI (`sqlite3`)
+
+### Install dependencies
+Run:
+```bash
+npm install
+```
+
+### SQLite notes
+- The app and tests require the `sqlite3` command-line tool.
+- On Windows, installing SQLite with `winget install SQLite.SQLite` is the simplest path.
+- The app will try to find `sqlite3` automatically on Windows, including common WinGet install paths.
+- If automatic detection is not sufficient, set `SQLITE3_PATH` to the full path of `sqlite3.exe`.
+
+### Environment variables
+- `APP_DB_PATH`
+  Overrides the SQLite database file path. If not set, the app uses `app.db` in the project root.
+- `SQLITE3_PATH`
+  Overrides the SQLite CLI executable path. Use this when `sqlite3` is installed in a non-standard location.
+- `PORT`
+  Overrides the HTTP port. If not set, the app listens on `3000`.
+
+PowerShell examples:
+```powershell
+$env:APP_DB_PATH = "C:\Projects\the-oracle\scratch.db"
+$env:SQLITE3_PATH = "C:\path\to\sqlite3.exe"
+$env:PORT = "3001"
+```
+
+Remove an override in the current shell:
+```powershell
+Remove-Item Env:APP_DB_PATH
+```
+
+## Run locally
+1. Install project dependencies:
+   ```bash
+   npm install
+   ```
+2. Build the TypeScript sources:
    ```bash
    npm run build
    ```
-2. Start the app:
+3. Start the app:
    ```bash
    npm start
    ```
-3. Open `http://localhost:3000`.
-4. Enter a question, choose **Independent** or **Relay**, and click **Run Review**.
-5. Watch progress update live in the UI. Inspect generated run folders in `runs/` and the SQLite database in `app.db`.
+4. Open `http://localhost:3000` unless `PORT` is overridden.
+5. Enter a question, choose **Independent** or **Relay**, and click **Run Review**.
+6. Watch progress update live in the UI. Inspect generated run folders in `runs/` and the SQLite database in `app.db` or the path from `APP_DB_PATH`.
 
 ### Development shortcut
 ```bash
 npm run dev
 ```
 
+### Verify local setup
+Run:
+```bash
+npm test
+```
+
+This confirms:
+- TypeScript compilation succeeds
+- SQLite is available to the test runner
+- workflow, persistence, and artifact tests pass
+
 ### Manual validation checklist
 - Start the app locally.
 - Submit an **Independent** run and confirm Atlas, Sage, Nova, and Mosaic move through statuses and finish.
 - Submit a **Relay** run and confirm Sage/Nova input files include primary prior context from the preceding agent.
-- Confirm `app.db` contains rows for `runs`, `agents`, `run_steps`, and `artifacts`.
+- Confirm `app.db` or the configured `APP_DB_PATH` contains rows for `runs`, `agents`, `run_steps`, and `artifacts`.
 - Confirm the filesystem contains the expected per-run markdown files.
 - Reopen an older run from history and inspect stored outputs.
 
