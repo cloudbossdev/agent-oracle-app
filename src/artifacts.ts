@@ -35,11 +35,12 @@ export function buildAgentInputMarkdown(params: {
   agent: AgentRecord;
   workflowMode: WorkflowMode;
   questionText: string;
+  instructionText: string;
   priorContext: string;
   task: string;
 }) {
-  const { runId, agent, workflowMode, questionText, priorContext, task } = params;
-  return `# Agent Input\n\n## Run ID\n${runId}\n\n## Agent Name\n${agent.display_name}\n\n## Role\n${agent.role_name}\n\n## Workflow Mode\n${workflowMode}\n\n## Original Question\n${questionText}\n\n## Prior Context\n${priorContext}\n\n## Task\n${task}\n`;
+  const { runId, agent, workflowMode, questionText, instructionText, priorContext, task } = params;
+  return `# Agent Input\n\n## Run ID\n${runId}\n\n## Agent Name\n${agent.display_name}\n\n## Role\n${agent.role_name}\n\n## Workflow Mode\n${workflowMode}\n\n## Agent Instructions\n${instructionText}\n\n## Original Question\n${questionText}\n\n## Prior Context\n${priorContext}\n\n## Task\n${task}\n`;
 }
 
 export function writeAgentInput(runFolder: string, agent: AgentRecord, content: string) {
