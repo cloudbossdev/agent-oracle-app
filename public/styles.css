@@ -1,0 +1,18 @@
+body { margin: 0; background: #f4f7fb; color: #1c2434; font-family: Arial, Helvetica, sans-serif; }
+* { box-sizing: border-box; }
+.container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+.grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px; }
+.panel { background: #fff; border: 1px solid #d8deea; border-radius: 12px; padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+.top-gap { margin-top: 20px; }
+textarea, select, button { font: inherit; }
+textarea { width: 100%; min-height: 150px; padding: 12px; border-radius: 8px; border: 1px solid #c7d0e0; }
+button { border: 0; background: #2448d8; color: white; border-radius: 8px; padding: 10px 14px; cursor: pointer; }
+.controls { display: flex; gap: 12px; align-items: end; margin-top: 12px; }
+.stack { display: flex; flex-direction: column; gap: 10px; }
+.history-button { text-align: left; background: white; color: #1c2434; border: 1px solid #d8deea; }
+.step-card { border: 1px solid #d8deea; background: #fbfcff; border-radius: 10px; padding: 12px; margin-top: 12px; }
+.step-header { display: flex; justify-content: space-between; gap: 12px; }
+.muted { color: #5d6880; }
+pre { white-space: pre-wrap; word-break: break-word; padding: 12px; border-radius: 8px; border: 1px solid #d8deea; background: #f5f7fb; }
+.empty { color: #5d6880; }
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
