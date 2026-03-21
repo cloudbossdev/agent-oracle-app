@@ -56,6 +56,7 @@ export interface AgentExecutionInput {
   workflowMode: WorkflowMode;
   questionText: string;
   agent: AgentRecord;
+  inputText: string;
   instructionText: string;
   priorContext: string;
   task: string;

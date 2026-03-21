@@ -50,7 +50,7 @@ async function processRun(runId: number, questionText: string, workflowMode: Wor
       recordArtifact(runId, step.agent.id, 'agent_input', inputPath);
       updateStep(step.id, { status: 'running', input_text: inputText, input_file_path: inputPath, started_at: new Date().toISOString() });
 
-      const result = await provider.execute({ runId, workflowMode, questionText, agent: step.agent, instructionText, priorContext, task, stepOrder: step.step_order });
+      const result = await provider.execute({ runId, workflowMode, questionText, agent: step.agent, inputText, instructionText, priorContext, task, stepOrder: step.step_order });
       const outputText = buildAgentOutputMarkdown({ runId, agent: step.agent, status: 'completed', result });
       const outputPath = writeAgentOutput(folderPath, step.agent, outputText);
       recordArtifact(runId, step.agent.id, 'agent_output', outputPath);

@@ -1,7 +1,10 @@
 // @ts-nocheck
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import { MockAgentProvider, ShellCommandAgentProvider, parseCommandArgs, resolveConfiguredProvider, resolveProviderConfig } from '../src/provider.js';
+import { createTempWorkspace } from './helpers.js';
 
 function withProviderEnv(env: Record<string, string | undefined>, callback: () => void) {
   const snapshot = {
@@ -81,4 +84,68 @@ test('command args parsing handles empty input', () => {
   assert.deepEqual(parseCommandArgs(undefined), []);
   assert.deepEqual(parseCommandArgs(''), []);
   assert.deepEqual(parseCommandArgs('  --foo   bar  '), ['--foo', 'bar']);
+});
+
+function buildExecutionInput() {
+  return {
+    runId: 1,
+    workflowMode: 'independent',
+    questionText: 'How should this work?',
+    agent: {
+      id: 1,
+      system_name: 'atlas',
+      display_name: 'Atlas',
+      role_name: 'Systems Architect',
+      instruction_file: 'agents/atlas.md',
+      sort_order: 1,
+      is_synthesizer: 0,
+      enabled: 1,
+    },
+    inputText: '# Agent Input\n\nTest prompt body',
+    instructionText: '# Atlas\n- Focus: architecture',
+    priorContext: 'None',
+    task: 'Review the original question directly and provide your own role-based answer.',
+    stepOrder: 1,
+  };
+}
+
+test('shell provider executes configured command and parses JSON output', async () => {
+  const root = createTempWorkspace('provider-shell-success-');
+  const scriptPath = path.join(root, 'success.js');
+  fs.writeFileSync(scriptPath, `
+process.stdin.setEncoding('utf8');
+let input = '';
+process.stdin.on('data', (chunk) => input += chunk);
+process.stdin.on('end', () => {
+  process.stdout.write(JSON.stringify({
+    summary: 'ok',
+    response: input.includes('Test prompt body') ? 'saw prompt' : 'missing prompt',
+    risks: 'none',
+    nextStep: 'continue'
+  }));
+});
+`);
+  const provider = new ShellCommandAgentProvider({ command: process.execPath, args: [scriptPath] });
+  const result = await provider.execute(buildExecutionInput());
+  assert.equal(result.summary, 'ok');
+  assert.equal(result.response, 'saw prompt');
+});
+
+test('shell provider rejects invalid JSON output', async () => {
+  const root = createTempWorkspace('provider-shell-invalid-json-');
+  const scriptPath = path.join(root, 'invalid.js');
+  fs.writeFileSync(scriptPath, `process.stdout.write('not-json');`);
+  const provider = new ShellCommandAgentProvider({ command: process.execPath, args: [scriptPath] });
+  await assert.rejects(() => provider.execute(buildExecutionInput()), /Shell provider returned invalid JSON/);
+});
+
+test('shell provider surfaces non-zero command exit', async () => {
+  const root = createTempWorkspace('provider-shell-nonzero-');
+  const scriptPath = path.join(root, 'nonzero.js');
+  fs.writeFileSync(scriptPath, `
+process.stderr.write('boom');
+process.exit(2);
+`);
+  const provider = new ShellCommandAgentProvider({ command: process.execPath, args: [scriptPath] });
+  await assert.rejects(() => provider.execute(buildExecutionInput()), /Shell provider command failed: boom/);
 });
