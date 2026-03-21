@@ -5,6 +5,52 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+export function parseCommandArgs(value: string | undefined) {
+  if (!value) return [];
+  return value.split(/\s+/).map((item) => item.trim()).filter(Boolean);
+}
+
+export function resolveProviderConfig() {
+  const providerName = String(process.env.AGENT_PROVIDER ?? 'mock').trim().toLowerCase();
+
+  if (providerName !== 'mock' && providerName !== 'shell') {
+    throw new Error(`Unsupported AGENT_PROVIDER value "${providerName}". Expected "mock" or "shell".`);
+  }
+
+  if (providerName === 'mock') {
+    return { providerName, command: null, args: [], timeoutMs: null };
+  }
+
+  const command = String(process.env.AGENT_COMMAND ?? '').trim();
+  if (!command) {
+    throw new Error('AGENT_PROVIDER is set to "shell" but AGENT_COMMAND is not configured.');
+  }
+
+  const timeoutValue = String(process.env.AGENT_TIMEOUT_MS ?? '').trim();
+  let timeoutMs: number | null = null;
+  if (timeoutValue) {
+    timeoutMs = Number(timeoutValue);
+    if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+      throw new Error('AGENT_TIMEOUT_MS must be a positive number when provided.');
+    }
+  }
+
+  return {
+    providerName,
+    command,
+    args: parseCommandArgs(process.env.AGENT_COMMAND_ARGS),
+    timeoutMs,
+  };
+}
+
+export function resolveConfiguredProvider() {
+  const config = resolveProviderConfig();
+  if (config.providerName === 'mock') {
+    return new MockAgentProvider();
+  }
+  return new ShellCommandAgentProvider(config);
+}
+
 export class MockAgentProvider implements AgentProvider {
   async execute(input: AgentExecutionInput): Promise<AgentExecutionResult> {
     await sleep(200 + input.stepOrder * 120);
@@ -20,6 +66,16 @@ export class MockAgentProvider implements AgentProvider {
 }
 
 export class ShellCommandAgentProvider implements AgentProvider {
+  command: string;
+  args: string[];
+  timeoutMs: number | null;
+
+  constructor(config: { command: string; args?: string[]; timeoutMs?: number | null }) {
+    this.command = config.command;
+    this.args = config.args ?? [];
+    this.timeoutMs = config.timeoutMs ?? null;
+  }
+
   async execute(): Promise<AgentExecutionResult> {
     throw new Error('ShellCommandAgentProvider is only a placeholder in this MVP.');
   }
