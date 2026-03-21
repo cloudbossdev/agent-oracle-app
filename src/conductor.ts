@@ -2,7 +2,7 @@
 import { buildAgentInputMarkdown, buildAgentOutputMarkdown, createRunFolder, writeAgentInput, writeAgentOutput, writeManifest, writeQuestionArtifact } from './artifacts.js';
 import { createRun, createRunSteps, getRunWithSteps, listAgents, recordArtifact, updateRunStatus, updateStep } from './db.js';
 import { MockAgentProvider } from './provider.js';
-import { buildPriorContext, buildTask } from './workflow.js';
+import { buildPriorContext, buildTask, loadAgentInstruction } from './workflow.js';
 import type { AgentProvider, WorkflowMode } from './types.js';
 
 let provider: AgentProvider = new MockAgentProvider();
@@ -32,14 +32,15 @@ async function processRun(runId: number, questionText: string, workflowMode: Wor
     for (const step of run.steps) {
       updateRunStatus(runId, 'running');
       updateStep(step.id, { status: 'preparing' });
+      const instructionText = loadAgentInstruction(step.agent);
       const priorContext = buildPriorContext(workflowMode, step.agent, previousOutputs);
       const task = buildTask(step.agent, workflowMode);
-      const inputText = buildAgentInputMarkdown({ runId, agent: step.agent, workflowMode, questionText, priorContext, task });
+      const inputText = buildAgentInputMarkdown({ runId, agent: step.agent, workflowMode, questionText, instructionText, priorContext, task });
       const inputPath = writeAgentInput(folderPath, step.agent, inputText);
       recordArtifact(runId, step.agent.id, 'agent_input', inputPath);
       updateStep(step.id, { status: 'running', input_text: inputText, input_file_path: inputPath, started_at: new Date().toISOString() });
 
-      const result = await provider.execute({ runId, workflowMode, questionText, agent: step.agent, priorContext, task, stepOrder: step.step_order });
+      const result = await provider.execute({ runId, workflowMode, questionText, agent: step.agent, instructionText, priorContext, task, stepOrder: step.step_order });
       const outputText = buildAgentOutputMarkdown({ runId, agent: step.agent, status: 'completed', result });
       const outputPath = writeAgentOutput(folderPath, step.agent, outputText);
       recordArtifact(runId, step.agent.id, 'agent_output', outputPath);

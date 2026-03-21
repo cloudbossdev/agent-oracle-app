@@ -1,5 +1,12 @@
 // @ts-nocheck
+import fs from 'node:fs';
+import path from 'node:path';
 import type { AgentRecord, WorkflowMode } from './types.js';
+
+export function loadAgentInstruction(agent: AgentRecord) {
+  const instructionPath = path.join(process.cwd(), agent.instruction_file);
+  return fs.readFileSync(instructionPath, 'utf8').trim();
+}
 
 export function buildTask(agent: AgentRecord, workflowMode: WorkflowMode) {
   if (agent.is_synthesizer) {
