@@ -18,3 +18,12 @@ export async function waitForCompletion(getRunWithSteps: (runId: number) => any,
   }
   throw new Error('Timed out waiting for run completion.');
 }
+
+export async function waitForTerminalRun(getRunWithSteps: (runId: number) => any, runId: number) {
+  for (let index = 0; index < 60; index += 1) {
+    const run = getRunWithSteps(runId);
+    if (run?.status === 'completed' || run?.status === 'failed') return run;
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+  throw new Error('Timed out waiting for terminal run status.');
+}
