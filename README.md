@@ -26,7 +26,7 @@ A simple local-only TypeScript web app that runs a fixed four-agent review workf
 - `src/conductor.ts` - deterministic workflow orchestrator.
 - `src/db.ts` and `src/sqlite.ts` - SQLite schema and persistence helpers.
 - `src/artifacts.ts` - per-run folder and markdown artifact generation.
-- `src/provider.ts` - mock provider and shell-command-backed provider.
+- `src/provider.ts` - mock, shell-command-backed, and OpenAI-backed providers.
 - `src/workflow.ts` - independent vs relay input construction.
 - `src/html.ts`, `public/app.js`, and `public/styles.css` - UI and polling behavior.
 - `agents/*.md` - concise instruction files for Atlas, Sage, Nova, and Mosaic.
@@ -93,6 +93,7 @@ Covered checks:
 - SQLite persistence layer
 - end-to-end independent mode execution with mock provider
 - end-to-end relay mode execution with mock provider
+- OpenAI-provider config parsing and structured-output handling
 - shell-provider config parsing and validation
 - shell-provider success, timeout, invalid JSON, and failure handling
 - markdown artifact creation
@@ -124,19 +125,28 @@ npm install
 - `PORT`
   Overrides the HTTP port. If not set, the app listens on `3000`.
 - `AGENT_PROVIDER`
-  Selects the execution provider. Supported values are `mock` and `shell`. If not set, the app uses `mock`.
+  Selects the execution provider. Supported values are `mock`, `shell`, and `openai`. If not set, the app uses `mock`.
 - `AGENT_COMMAND`
   Required when `AGENT_PROVIDER=shell`. This is the executable the app will start for every agent step.
 - `AGENT_COMMAND_ARGS`
   Optional whitespace-separated arguments passed to `AGENT_COMMAND`.
 - `AGENT_TIMEOUT_MS`
-  Optional positive timeout in milliseconds for each shell-provider step.
+  Optional positive timeout in milliseconds for each shell-provider or OpenAI-provider step.
+- `OPENAI_API_KEY`
+  Required when `AGENT_PROVIDER=openai`. This key must stay in the backend environment and must not be exposed in browser code.
+- `OPENAI_MODEL`
+  Required when `AGENT_PROVIDER=openai`. This is the model name used for each agent step.
 
 PowerShell examples:
 ```powershell
 $env:APP_DB_PATH = "C:\Projects\the-oracle\scratch.db"
 $env:SQLITE3_PATH = "C:\path\to\sqlite3.exe"
 $env:PORT = "3001"
+$env:AGENT_PROVIDER = "openai"
+$env:OPENAI_API_KEY = "sk-..."
+$env:OPENAI_MODEL = "gpt-5.4-mini"
+$env:AGENT_TIMEOUT_MS = "60000"
+
 $env:AGENT_PROVIDER = "shell"
 $env:AGENT_COMMAND = "C:\path\to\agent-runner.exe"
 $env:AGENT_COMMAND_ARGS = "--mode review --json"
@@ -200,6 +210,45 @@ Example expected JSON:
 }
 ```
 
+## OpenAI provider usage
+
+The default provider remains `mock`, which keeps local setup and CI deterministic.
+To run the app with real backend OpenAI analysis, set:
+
+```powershell
+$env:AGENT_PROVIDER = "openai"
+$env:OPENAI_API_KEY = "sk-..."
+$env:OPENAI_MODEL = "gpt-5.4-mini"
+$env:AGENT_TIMEOUT_MS = "60000"
+npm start
+```
+
+OpenAI-provider behavior:
+
+- the app sends the assembled agent input through the backend provider layer
+- the browser never receives your API key
+- the provider requests structured output for:
+  - `summary`
+  - `response`
+  - `risks`
+  - `nextStep`
+- request failures, empty output, malformed JSON, or missing required fields fail the run step cleanly
+
+Recommended local workflow:
+
+1. Start with `AGENT_PROVIDER=mock` to confirm the app and UI are working.
+2. Set `OPENAI_API_KEY` and `OPENAI_MODEL`.
+3. Switch to `AGENT_PROVIDER=openai`.
+4. Run one Independent review and one Relay review.
+5. Inspect the UI, `runs/` artifacts, and `app.db` results before deciding whether prompt or model tuning is needed.
+
+Secret-handling rules:
+
+- never commit `OPENAI_API_KEY` into the repo
+- never place the key in frontend JavaScript or browser-exposed config
+- keep the key in your local shell environment or another backend-only secret store
+- if you believe the key leaked, rotate it before continuing
+
 ### Development shortcut
 ```bash
 npm run dev
@@ -226,13 +275,15 @@ This confirms:
 
 ### Provider notes
 - `mock` remains the default provider for deterministic local testing and CI.
+- `openai` enables real backend OpenAI execution through `OPENAI_API_KEY` and `OPENAI_MODEL`.
 - `shell` enables real command-backed execution through `AGENT_COMMAND`.
+- Tests cover OpenAI-provider config and structured-output handling without depending on a live API key in GitHub Actions.
 - Tests cover shell-provider parsing and failure handling without depending on a live external agent CLI in GitHub Actions.
 
 ## Validation results
 - Automated tests verify the required workflow, storage, and artifact behavior.
 - The mock provider adds small deterministic delays so progress is visible in the UI.
-- The app is fully runnable locally without cloud services or external APIs.
+- The app is fully runnable locally without cloud services or external APIs when using the default mock provider.
 
 ## Remaining limitations
 - The UI is intentionally basic for MVP clarity.
