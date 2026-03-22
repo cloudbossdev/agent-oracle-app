@@ -13,6 +13,13 @@ const runErrorEl = document.getElementById('runError');
 const artifactPanelEl = document.getElementById('artifactPanel');
 const artifactListEl = document.getElementById('artifactList');
 const stepsEl = document.getElementById('steps');
+const finalSynthesisCardEl = document.getElementById('finalSynthesisCard');
+const finalSynthesisAgentEl = document.getElementById('finalSynthesisAgent');
+const finalSynthesisSummaryEl = document.getElementById('finalSynthesisSummary');
+const finalSynthesisStatusEl = document.getElementById('finalSynthesisStatus');
+const finalSynthesisResponseEl = document.getElementById('finalSynthesisResponse');
+const finalSynthesisRisksEl = document.getElementById('finalSynthesisRisks');
+const finalSynthesisNextStepEl = document.getElementById('finalSynthesisNextStep');
 const finalOutputEl = document.getElementById('finalOutput');
 
 let activeRunId = null;
@@ -90,12 +97,74 @@ function escapeHtml(input) {
   return String(input).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 }
 
+function extractMarkdownSection(markdown, heading) {
+  if (!markdown) return null;
+  const escaped = String(heading).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = String(markdown).match(new RegExp(`## ${escaped}\\n([\\s\\S]*?)(?:\\n## |$)`));
+  return match ? match[1].trim() : null;
+}
+
+function parseAgentOutput(markdown) {
+  if (!markdown || !String(markdown).includes('# Agent Output')) return null;
+  return {
+    agent: extractMarkdownSection(markdown, 'Agent'),
+    status: extractMarkdownSection(markdown, 'Status'),
+    summary: extractMarkdownSection(markdown, 'Summary'),
+    response: extractMarkdownSection(markdown, 'Response'),
+    risks: extractMarkdownSection(markdown, 'Risks / Caveats'),
+    nextStep: extractMarkdownSection(markdown, 'Recommended Next Step'),
+  };
+}
+
+function renderOutputSection(title, value, extraClass = '') {
+  if (!value) return '';
+  return `
+    <div class="output-block ${extraClass}">
+      <div class="section-label">${escapeHtml(title)}</div>
+      <div class="output-copy">${escapeHtml(value)}</div>
+    </div>
+  `;
+}
+
+function renderFinalSynthesis(step) {
+  const parsed = parseAgentOutput(step?.output_text);
+  if (!parsed) {
+    finalSynthesisCardEl.classList.add('hidden');
+    finalOutputEl.textContent = step?.output_text || 'Mosaic will publish the final synthesis here after the reviewer steps finish.';
+    finalOutputEl.className = step?.output_text ? '' : 'empty';
+    return;
+  }
+
+  finalSynthesisCardEl.classList.remove('hidden');
+  finalSynthesisAgentEl.textContent = parsed.agent || 'Mosaic';
+  finalSynthesisSummaryEl.textContent = parsed.summary || 'Final synthesis ready.';
+  finalSynthesisStatusEl.textContent = formatStatus(parsed.status || 'completed');
+  finalSynthesisStatusEl.className = `status-badge small ${statusClass((parsed.status || 'completed').toLowerCase().replaceAll(' ', '_'))}`;
+  finalSynthesisResponseEl.innerHTML = renderOutputSection('Response', parsed.response);
+  finalSynthesisRisksEl.innerHTML = renderOutputSection('Risks / Caveats', parsed.risks);
+  finalSynthesisNextStepEl.innerHTML = renderOutputSection('Recommended Next Step', parsed.nextStep);
+  finalOutputEl.textContent = step.output_text;
+  finalOutputEl.className = 'output-raw hidden';
+}
+
 function renderStepCard(step) {
   const card = document.createElement('article');
   card.className = `step-card ${statusClass(step.status)}`;
 
   const bodyParts = [];
-  if (step.output_text) {
+  const parsedOutput = parseAgentOutput(step.output_text);
+  if (parsedOutput) {
+    bodyParts.push(`
+      <div class="step-section">
+        <div class="output-layout">
+          ${renderOutputSection('Summary', parsedOutput.summary, 'output-summary')}
+          ${renderOutputSection('Response', parsedOutput.response)}
+          ${renderOutputSection('Risks / Caveats', parsedOutput.risks)}
+          ${renderOutputSection('Recommended Next Step', parsedOutput.nextStep)}
+        </div>
+      </div>
+    `);
+  } else if (step.output_text) {
     bodyParts.push(`
       <div class="step-section">
         <div class="section-label">Output</div>
@@ -198,8 +267,7 @@ function renderRun(run) {
   }
 
   const mosaic = run.steps.find((step) => step.agent.system_name === 'mosaic');
-  finalOutputEl.textContent = mosaic?.output_text || 'Mosaic will publish the final synthesis here after the reviewer steps finish.';
-  finalOutputEl.className = mosaic?.output_text ? '' : 'empty';
+  renderFinalSynthesis(mosaic);
 
   for (const step of run.steps) {
     stepsEl.appendChild(renderStepCard(step));

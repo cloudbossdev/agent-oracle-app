@@ -86,6 +86,20 @@ export function renderIndexHtml(providerView) {
     </section>
     <section class="panel top-gap">
       <h2>Final Synthesis</h2>
+      <div id="finalSynthesisCard" class="synthesis-card hidden">
+        <div class="synthesis-header">
+          <div>
+            <div id="finalSynthesisAgent" class="synthesis-agent"></div>
+            <div id="finalSynthesisSummary" class="synthesis-summary"></div>
+          </div>
+          <div id="finalSynthesisStatus" class="status-badge small"></div>
+        </div>
+        <div id="finalSynthesisResponse" class="synthesis-section"></div>
+        <div class="synthesis-grid">
+          <div id="finalSynthesisRisks" class="synthesis-section"></div>
+          <div id="finalSynthesisNextStep" class="synthesis-section"></div>
+        </div>
+      </div>
       <pre id="finalOutput" class="empty">Mosaic's final synthesis will appear here after the reviewer steps finish.</pre>
     </section>
   </main>
