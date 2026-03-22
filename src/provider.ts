@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { spawn } from 'node:child_process';
+import OpenAI from 'openai';
 import type { AgentExecutionInput, AgentExecutionResult, AgentProvider } from './types.js';
 
 function sleep(ms: number) {
@@ -78,15 +79,15 @@ export function resolveConfiguredProvider() {
   return new ShellCommandAgentProvider(config);
 }
 
-function validateProviderOutput(payload: unknown): AgentExecutionResult {
+function validateProviderOutput(payload: unknown, providerLabel: string): AgentExecutionResult {
   if (!payload || typeof payload !== 'object') {
-    throw new Error('Shell provider returned invalid JSON: expected an object.');
+    throw new Error(`${providerLabel} returned invalid JSON: expected an object.`);
   }
 
   const result = payload as Record<string, unknown>;
   for (const field of ['summary', 'response', 'risks', 'nextStep']) {
     if (typeof result[field] !== 'string' || result[field].trim() === '') {
-      throw new Error(`Shell provider returned invalid JSON: missing string field "${field}".`);
+      throw new Error(`${providerLabel} returned invalid JSON: missing string field "${field}".`);
     }
   }
 
@@ -172,7 +173,7 @@ export class ShellCommandAgentProvider implements AgentProvider {
 
           try {
             const parsed = JSON.parse(stdout.trim() || '{}');
-            resolve(validateProviderOutput(parsed));
+            resolve(validateProviderOutput(parsed, 'Shell provider'));
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             reject(new Error(`Shell provider returned invalid JSON: ${message}`));
@@ -190,14 +191,57 @@ export class OpenAIAgentProvider implements AgentProvider {
   apiKey: string;
   model: string;
   timeoutMs: number | null;
+  client: {
+    responses: {
+      create: (params: Record<string, unknown>) => Promise<{ output_text?: string | null }>;
+    };
+  };
 
-  constructor(config: { apiKey: string; model: string; timeoutMs?: number | null }) {
+  constructor(
+    config: { apiKey: string; model: string; timeoutMs?: number | null },
+    client = new OpenAI({
+      apiKey: config.apiKey,
+      timeout: config.timeoutMs ?? undefined,
+      maxRetries: 0,
+    }),
+  ) {
     this.apiKey = config.apiKey;
     this.model = config.model;
     this.timeoutMs = config.timeoutMs ?? null;
+    this.client = client;
   }
 
-  async execute(_input: AgentExecutionInput): Promise<AgentExecutionResult> {
-    throw new Error('OpenAI provider is configured but not implemented yet.');
+  async execute(input: AgentExecutionInput): Promise<AgentExecutionResult> {
+    let response;
+    try {
+      response = await this.client.responses.create({
+        model: this.model,
+        instructions: [
+          `You are ${input.agent.display_name}, acting as ${input.agent.role_name}.`,
+          'Return only one JSON object with the exact keys: summary, response, risks, nextStep.',
+          'Each field must be a non-empty string.',
+          'Do not wrap the JSON in markdown fences.',
+        ].join(' '),
+        input: input.inputText,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`OpenAI provider request failed: ${message}`);
+    }
+
+    const outputText = String(response.output_text ?? '').trim();
+    if (!outputText) {
+      throw new Error('OpenAI provider returned empty output.');
+    }
+
+    try {
+      return validateProviderOutput(JSON.parse(outputText), 'OpenAI provider');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.startsWith('OpenAI provider returned invalid JSON:')) {
+        throw error;
+      }
+      throw new Error(`OpenAI provider returned invalid JSON: ${message}`);
+    }
   }
 }
