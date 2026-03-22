@@ -3,7 +3,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { startRun } from './conductor.js';
-import { getRunWithSteps, initDb, listRuns } from './db.js';
+import { getRunWithSteps, initDb, listRunSummaries } from './db.js';
 import { renderIndexHtml } from './html.js';
 import { resolveProviderConfig } from './provider.js';
 
@@ -64,7 +64,7 @@ const server = http.createServer(async (request, response) => {
   }
 
   if (request.method === 'GET' && url.pathname === '/api/runs') {
-    sendJson(response, 200, listRuns());
+    sendJson(response, 200, listRunSummaries());
     return;
   }
 

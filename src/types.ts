@@ -52,6 +52,17 @@ export interface RunDetail extends RunRecord {
   artifacts: ArtifactRecord[];
 }
 
+export interface RunHistorySummary extends RunRecord {
+  total_steps: number;
+  completed_steps: number;
+  failed_steps: number;
+  active_steps: number;
+  artifact_count: number;
+  final_summary: string | null;
+  failed_agent_name: string | null;
+  failed_error_text: string | null;
+}
+
 export interface AgentExecutionInput {
   runId: number;
   workflowMode: WorkflowMode;
