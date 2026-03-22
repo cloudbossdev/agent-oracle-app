@@ -149,3 +149,11 @@ process.exit(2);
   const provider = new ShellCommandAgentProvider({ command: process.execPath, args: [scriptPath] });
   await assert.rejects(() => provider.execute(buildExecutionInput()), /Shell provider command failed: boom/);
 });
+
+test('shell provider surfaces timeout failures', async () => {
+  const root = createTempWorkspace('provider-shell-timeout-');
+  const scriptPath = path.join(root, 'timeout.js');
+  fs.writeFileSync(scriptPath, `setTimeout(() => process.stdout.write('{}'), 200);`);
+  const provider = new ShellCommandAgentProvider({ command: process.execPath, args: [scriptPath], timeoutMs: 50 });
+  await assert.rejects(() => provider.execute(buildExecutionInput()), /Shell provider timed out after 50ms/);
+});
