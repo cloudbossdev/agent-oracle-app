@@ -26,7 +26,7 @@ A simple local-only TypeScript web app that runs a fixed four-agent review workf
 - `src/conductor.ts` - deterministic workflow orchestrator.
 - `src/db.ts` and `src/sqlite.ts` - SQLite schema and persistence helpers.
 - `src/artifacts.ts` - per-run folder and markdown artifact generation.
-- `src/provider.ts` - mock provider and placeholder shell provider.
+- `src/provider.ts` - mock provider and shell-command-backed provider.
 - `src/workflow.ts` - independent vs relay input construction.
 - `src/html.ts`, `public/app.js`, and `public/styles.css` - UI and polling behavior.
 - `agents/*.md` - concise instruction files for Atlas, Sage, Nova, and Mosaic.
@@ -93,6 +93,8 @@ Covered checks:
 - SQLite persistence layer
 - end-to-end independent mode execution with mock provider
 - end-to-end relay mode execution with mock provider
+- shell-provider config parsing and validation
+- shell-provider success, timeout, invalid JSON, and failure handling
 - markdown artifact creation
 - final synthesis persistence
 
@@ -121,12 +123,24 @@ npm install
   Overrides the SQLite CLI executable path. Use this when `sqlite3` is installed in a non-standard location.
 - `PORT`
   Overrides the HTTP port. If not set, the app listens on `3000`.
+- `AGENT_PROVIDER`
+  Selects the execution provider. Supported values are `mock` and `shell`. If not set, the app uses `mock`.
+- `AGENT_COMMAND`
+  Required when `AGENT_PROVIDER=shell`. This is the executable the app will start for every agent step.
+- `AGENT_COMMAND_ARGS`
+  Optional whitespace-separated arguments passed to `AGENT_COMMAND`.
+- `AGENT_TIMEOUT_MS`
+  Optional positive timeout in milliseconds for each shell-provider step.
 
 PowerShell examples:
 ```powershell
 $env:APP_DB_PATH = "C:\Projects\the-oracle\scratch.db"
 $env:SQLITE3_PATH = "C:\path\to\sqlite3.exe"
 $env:PORT = "3001"
+$env:AGENT_PROVIDER = "shell"
+$env:AGENT_COMMAND = "C:\path\to\agent-runner.exe"
+$env:AGENT_COMMAND_ARGS = "--mode review --json"
+$env:AGENT_TIMEOUT_MS = "60000"
 ```
 
 Remove an override in the current shell:
@@ -150,6 +164,41 @@ Remove-Item Env:APP_DB_PATH
 4. Open `http://localhost:3000` unless `PORT` is overridden.
 5. Enter a question, choose **Independent** or **Relay**, and click **Run Review**.
 6. Watch progress update live in the UI. Inspect generated run folders in `runs/` and the SQLite database in `app.db` or the path from `APP_DB_PATH`.
+
+## Shell provider usage
+
+The default provider remains `mock`, which keeps local setup and CI deterministic.
+To run a real command-backed provider, set:
+
+```powershell
+$env:AGENT_PROVIDER = "shell"
+$env:AGENT_COMMAND = "C:\path\to\agent-runner.exe"
+$env:AGENT_COMMAND_ARGS = "--mode review --json"
+$env:AGENT_TIMEOUT_MS = "60000"
+npm start
+```
+
+Shell-provider behavior:
+
+- the app sends the assembled agent input markdown to the configured command on `stdin`
+- the command must write one JSON object to `stdout`
+- the JSON must contain non-empty string fields:
+  - `summary`
+  - `response`
+  - `risks`
+  - `nextStep`
+- non-zero exit, invalid JSON, missing required fields, or timeout cause the run step to fail cleanly
+
+Example expected JSON:
+
+```json
+{
+  "summary": "Atlas identified the main implementation risks.",
+  "response": "Detailed agent response text goes here.",
+  "risks": "Primary uncertainty is around provider output quality.",
+  "nextStep": "Proceed to the next workflow step."
+}
+```
 
 ### Development shortcut
 ```bash
@@ -175,11 +224,10 @@ This confirms:
 - Confirm the filesystem contains the expected per-run markdown files.
 - Reopen an older run from history and inspect stored outputs.
 
-### How to replace the mock provider later
-1. Implement the `AgentProvider` interface in `src/types.ts`.
-2. Add a real provider module beside `src/provider.ts`.
-3. Swap the provider in `src/conductor.ts` with `setAgentProvider(...)` or change the default provider assignment.
-4. Keep the Conductor unchanged so the same SQLite records, markdown files, and polling UI continue to work.
+### Provider notes
+- `mock` remains the default provider for deterministic local testing and CI.
+- `shell` enables real command-backed execution through `AGENT_COMMAND`.
+- Tests cover shell-provider parsing and failure handling without depending on a live external agent CLI in GitHub Actions.
 
 ## Validation results
 - Automated tests verify the required workflow, storage, and artifact behavior.
@@ -187,6 +235,5 @@ This confirms:
 - The app is fully runnable locally without cloud services or external APIs.
 
 ## Remaining limitations
-- The shell provider is only a placeholder for future real CLI-backed integration.
 - The UI is intentionally basic for MVP clarity.
 - The implementation uses the local `sqlite3` CLI instead of a Node SQLite package to avoid external dependency setup.
