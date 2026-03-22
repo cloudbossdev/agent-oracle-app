@@ -29,6 +29,13 @@ async function readBody(request: http.IncomingMessage) {
 function getProviderView() {
   try {
     const config = resolveProviderConfig();
+    if (config.providerName === 'openai') {
+      return {
+        label: 'OpenAI provider',
+        copy: `Agent steps are sent through the backend OpenAI integration using model ${config.model}. Keep OPENAI_API_KEY configured in the server environment only.`,
+      };
+    }
+
     if (config.providerName === 'shell') {
       return {
         label: 'Shell provider',

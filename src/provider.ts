@@ -14,17 +14,8 @@ export function parseCommandArgs(value: string | undefined) {
 export function resolveProviderConfig() {
   const providerName = String(process.env.AGENT_PROVIDER ?? 'mock').trim().toLowerCase();
 
-  if (providerName !== 'mock' && providerName !== 'shell') {
-    throw new Error(`Unsupported AGENT_PROVIDER value "${providerName}". Expected "mock" or "shell".`);
-  }
-
-  if (providerName === 'mock') {
-    return { providerName, command: null, args: [], timeoutMs: null };
-  }
-
-  const command = String(process.env.AGENT_COMMAND ?? '').trim();
-  if (!command) {
-    throw new Error('AGENT_PROVIDER is set to "shell" but AGENT_COMMAND is not configured.');
+  if (providerName !== 'mock' && providerName !== 'shell' && providerName !== 'openai') {
+    throw new Error(`Unsupported AGENT_PROVIDER value "${providerName}". Expected "mock", "shell", or "openai".`);
   }
 
   const timeoutValue = String(process.env.AGENT_TIMEOUT_MS ?? '').trim();
@@ -36,11 +27,43 @@ export function resolveProviderConfig() {
     }
   }
 
+  if (providerName === 'mock') {
+    return { providerName, command: null, args: [], timeoutMs: null, apiKey: null, model: null };
+  }
+
+  if (providerName === 'openai') {
+    const apiKey = String(process.env.OPENAI_API_KEY ?? '').trim();
+    if (!apiKey) {
+      throw new Error('AGENT_PROVIDER is set to "openai" but OPENAI_API_KEY is not configured.');
+    }
+
+    const model = String(process.env.OPENAI_MODEL ?? '').trim();
+    if (!model) {
+      throw new Error('AGENT_PROVIDER is set to "openai" but OPENAI_MODEL is not configured.');
+    }
+
+    return {
+      providerName,
+      command: null,
+      args: [],
+      timeoutMs,
+      apiKey,
+      model,
+    };
+  }
+
+  const command = String(process.env.AGENT_COMMAND ?? '').trim();
+  if (!command) {
+    throw new Error('AGENT_PROVIDER is set to "shell" but AGENT_COMMAND is not configured.');
+  }
+
   return {
     providerName,
     command,
     args: parseCommandArgs(process.env.AGENT_COMMAND_ARGS),
     timeoutMs,
+    apiKey: null,
+    model: null,
   };
 }
 
@@ -48,6 +71,9 @@ export function resolveConfiguredProvider() {
   const config = resolveProviderConfig();
   if (config.providerName === 'mock') {
     return new MockAgentProvider();
+  }
+  if (config.providerName === 'openai') {
+    return new OpenAIAgentProvider(config);
   }
   return new ShellCommandAgentProvider(config);
 }
@@ -157,5 +183,21 @@ export class ShellCommandAgentProvider implements AgentProvider {
       child.stdin.write(input.inputText);
       child.stdin.end();
     });
+  }
+}
+
+export class OpenAIAgentProvider implements AgentProvider {
+  apiKey: string;
+  model: string;
+  timeoutMs: number | null;
+
+  constructor(config: { apiKey: string; model: string; timeoutMs?: number | null }) {
+    this.apiKey = config.apiKey;
+    this.model = config.model;
+    this.timeoutMs = config.timeoutMs ?? null;
+  }
+
+  async execute(_input: AgentExecutionInput): Promise<AgentExecutionResult> {
+    throw new Error('OpenAI provider is configured but not implemented yet.');
   }
 }
