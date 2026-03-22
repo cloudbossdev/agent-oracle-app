@@ -39,6 +39,12 @@ function formatDateTime(value) {
   return date.toLocaleString();
 }
 
+function summarizeHistoryProgress(run) {
+  if (run.failed_steps > 0) return `${run.completed_steps}/${run.total_steps} completed | ${run.failed_steps} failed`;
+  if (run.active_steps > 0) return `${run.completed_steps}/${run.total_steps} completed | ${run.active_steps} active`;
+  return `${run.completed_steps}/${run.total_steps} completed`;
+}
+
 function summarizeProgress(run) {
   const completed = run.steps.filter((step) => step.status === 'completed').length;
   const failed = run.steps.filter((step) => step.status === 'failed').length;
@@ -221,12 +227,23 @@ async function loadHistory() {
   for (const run of runs) {
     const button = document.createElement('button');
     button.className = `history-button ${activeRunId === run.id ? 'selected' : ''}`;
+    const summaryText = run.failed_agent_name
+      ? `${run.failed_agent_name} failed: ${run.failed_error_text ?? 'Run stopped with an error.'}`
+      : run.final_summary
+        ? `Final synthesis: ${run.final_summary}`
+        : run.question_text;
     button.innerHTML = `
       <div class="history-top">
         <strong>Run #${run.id}</strong>
         <span class="status-badge small ${statusClass(run.status)}">${formatStatus(run.status)}</span>
       </div>
       <div class="muted history-meta">${formatDateTime(run.created_at)} | ${describeWorkflowMode(run.workflow_mode)}</div>
+      <div class="history-kpis">
+        <span>${escapeHtml(summarizeHistoryProgress(run))}</span>
+        <span>${escapeHtml(`${run.artifact_count} artifacts`)}</span>
+        <span>${escapeHtml(run.run_folder)}</span>
+      </div>
+      <div class="history-summary ${run.failed_agent_name ? 'history-summary-failed' : ''}">${escapeHtml(summaryText.slice(0, 180))}</div>
       <div class="history-question">${escapeHtml(run.question_text.slice(0, 120))}</div>
     `;
     button.addEventListener('click', async () => {

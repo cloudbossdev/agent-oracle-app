@@ -84,6 +84,21 @@ button:disabled { opacity: 0.75; cursor: wait; }
 .history-button.selected { border-color: #0f7a75; box-shadow: 0 0 0 1px rgba(15, 122, 117, 0.25); }
 .history-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
 .history-meta { margin-bottom: 8px; font-size: 0.92rem; }
+.history-kpis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-bottom: 10px;
+  color: #53617b;
+  font-size: 0.86rem;
+}
+.history-summary {
+  margin-bottom: 10px;
+  line-height: 1.45;
+  font-weight: 600;
+  color: #24324f;
+}
+.history-summary-failed { color: #8f2b2b; }
 .history-question { line-height: 1.45; }
 .run-summary { display: grid; gap: 14px; margin-bottom: 16px; }
 .summary-row { display: flex; align-items: start; justify-content: space-between; gap: 16px; }

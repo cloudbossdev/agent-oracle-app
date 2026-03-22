@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { AGENT_SEED } from './agents.js';
 import { sqlInsert, sqlUpdate, sqliteExec, sqliteQuery } from './sqlite.js';
-import type { AgentRecord, ArtifactRecord, RunDetail, RunRecord, RunStepRecord, Status, WorkflowMode } from './types.js';
+import type { AgentRecord, ArtifactRecord, RunDetail, RunHistorySummary, RunRecord, RunStepRecord, Status, WorkflowMode } from './types.js';
 
 function now() {
   return new Date().toISOString();
@@ -142,6 +142,43 @@ export function updateStep(stepId: number, patch: Partial<RunStepRecord>) {
 
 export function listRuns(limit = 20): RunRecord[] {
   return sqliteQuery<RunRecord>(`SELECT * FROM runs ORDER BY created_at DESC LIMIT ${limit};`);
+}
+
+function extractMarkdownSection(markdown: string | null, heading: string) {
+  if (!markdown) return null;
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = markdown.match(new RegExp(`## ${escaped}\\n([\\s\\S]*?)(?:\\n## |$)`));
+  return match ? match[1].trim() : null;
+}
+
+function toRunHistorySummary(detail: RunDetail): RunHistorySummary {
+  const failedStep = detail.steps.find((step) => step.status === 'failed');
+  const mosaicStep = detail.steps.find((step) => step.agent.system_name === 'mosaic' && step.output_text);
+
+  return {
+    id: detail.id,
+    created_at: detail.created_at,
+    updated_at: detail.updated_at,
+    question_text: detail.question_text,
+    workflow_mode: detail.workflow_mode,
+    status: detail.status,
+    run_folder: detail.run_folder,
+    total_steps: detail.steps.length,
+    completed_steps: detail.steps.filter((step) => step.status === 'completed').length,
+    failed_steps: detail.steps.filter((step) => step.status === 'failed').length,
+    active_steps: detail.steps.filter((step) => step.status === 'running' || step.status === 'preparing').length,
+    artifact_count: detail.artifacts.length,
+    final_summary: extractMarkdownSection(mosaicStep?.output_text ?? null, 'Summary'),
+    failed_agent_name: failedStep?.agent.display_name ?? null,
+    failed_error_text: failedStep?.error_text ?? null,
+  };
+}
+
+export function listRunSummaries(limit = 20): RunHistorySummary[] {
+  return listRuns(limit)
+    .map((run) => getRunWithSteps(run.id))
+    .filter(Boolean)
+    .map((detail) => toRunHistorySummary(detail));
 }
 
 export function getRun(runId: number): RunRecord | undefined {
