@@ -5,6 +5,7 @@ import path from 'node:path';
 import { startRun } from './conductor.js';
 import { getRunWithSteps, initDb, listRuns } from './db.js';
 import { renderIndexHtml } from './html.js';
+import { resolveProviderConfig } from './provider.js';
 
 initDb();
 const publicDir = path.join(process.cwd(), 'public');
@@ -25,11 +26,33 @@ async function readBody(request: http.IncomingMessage) {
   return Buffer.concat(chunks).toString('utf8');
 }
 
+function getProviderView() {
+  try {
+    const config = resolveProviderConfig();
+    if (config.providerName === 'shell') {
+      return {
+        label: 'Shell provider',
+        copy: 'Agent steps are sent to your configured local command. Make sure that command is available before you start a run.',
+      };
+    }
+
+    return {
+      label: 'Mock provider',
+      copy: 'Runs use deterministic local responses. This is the safest mode for demos, UI checks, and CI.',
+    };
+  } catch (error) {
+    return {
+      label: 'Provider config issue',
+      copy: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 const server = http.createServer(async (request, response) => {
   const url = new URL(request.url ?? '/', 'http://localhost');
 
   if (request.method === 'GET' && url.pathname === '/') {
-    sendText(response, 200, 'text/html; charset=utf-8', renderIndexHtml());
+    sendText(response, 200, 'text/html; charset=utf-8', renderIndexHtml(getProviderView()));
     return;
   }
 

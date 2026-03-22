@@ -24,6 +24,18 @@ h1 { margin: 0; font-size: clamp(2rem, 3vw, 3rem); line-height: 1.05; }
   backdrop-filter: blur(6px);
 }
 .panel-copy { margin-top: 0; margin-bottom: 14px; }
+.info-strip {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(240, 244, 251, 0.9);
+  border: 1px solid #d8deea;
+}
+.info-chip { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.info-label { font-size: 0.76rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #6a7791; }
+.info-copy { line-height: 1.45; }
 .top-gap { margin-top: 20px; }
 textarea, select, button { font: inherit; }
 textarea {
@@ -45,6 +57,15 @@ button {
 }
 button:disabled { opacity: 0.75; cursor: wait; }
 .controls { display: flex; gap: 12px; align-items: end; margin-top: 12px; }
+.mode-guide { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.mode-card {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid #d8deea;
+  background: rgba(255,255,255,0.9);
+}
+.mode-card p { margin: 8px 0 0; line-height: 1.5; }
+.mode-title { font-size: 0.9rem; font-weight: 700; letter-spacing: 0.02em; }
 .stack { display: flex; flex-direction: column; gap: 10px; }
 .history-button {
   text-align: left;
@@ -128,4 +149,5 @@ pre {
   .grid { grid-template-columns: 1fr; }
   .summary-row { flex-direction: column; }
   .controls { flex-direction: column; align-items: stretch; }
+  .mode-guide { grid-template-columns: 1fr; }
 }

@@ -63,6 +63,12 @@ function summarizeTiming(run) {
   return `Created ${formatDateTime(run.created_at)}`;
 }
 
+function describeWorkflowMode(mode) {
+  return mode === 'relay'
+    ? 'Relay review'
+    : 'Independent review';
+}
+
 function setRunEmptyState(message) {
   runStateEl.textContent = message;
   runStateEl.className = 'empty-state';
@@ -118,11 +124,11 @@ function renderRun(run) {
   activeRunId = run.id;
   runStateEl.className = 'hidden';
   runSummaryEl.classList.remove('hidden');
-  runMetaEl.textContent = `Run #${run.id} | ${formatStatus(run.workflow_mode)} workflow`;
+  runMetaEl.textContent = `Review Run #${run.id}`;
   runQuestionEl.textContent = run.question_text;
   runBadgeEl.textContent = formatStatus(run.status);
   runBadgeEl.className = `status-badge ${statusClass(run.status)}`;
-  runProgressEl.textContent = summarizeProgress(run);
+  runProgressEl.textContent = `${describeWorkflowMode(run.workflow_mode)} | ${summarizeProgress(run)}`;
   runTimingEl.textContent = summarizeTiming(run);
   stepsEl.innerHTML = '';
 
@@ -136,7 +142,7 @@ function renderRun(run) {
   }
 
   const mosaic = run.steps.find((step) => step.agent.system_name === 'mosaic');
-  finalOutputEl.textContent = mosaic?.output_text || 'Mosaic output will appear here after prior steps complete.';
+  finalOutputEl.textContent = mosaic?.output_text || 'Mosaic will publish the final synthesis here after the reviewer steps finish.';
   finalOutputEl.className = mosaic?.output_text ? '' : 'empty';
 
   for (const step of run.steps) {
@@ -170,7 +176,7 @@ async function loadHistory() {
         <strong>Run #${run.id}</strong>
         <span class="status-badge small ${statusClass(run.status)}">${formatStatus(run.status)}</span>
       </div>
-      <div class="muted history-meta">${formatDateTime(run.created_at)} | ${formatStatus(run.workflow_mode)}</div>
+      <div class="muted history-meta">${formatDateTime(run.created_at)} | ${describeWorkflowMode(run.workflow_mode)}</div>
       <div class="history-question">${escapeHtml(run.question_text.slice(0, 120))}</div>
     `;
     button.addEventListener('click', async () => {
