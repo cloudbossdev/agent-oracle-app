@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { MockAgentProvider, ShellCommandAgentProvider, parseCommandArgs, resolveConfiguredProvider, resolveProviderConfig } from '../src/provider.js';
+import { MockAgentProvider, OpenAIAgentProvider, ShellCommandAgentProvider, parseCommandArgs, resolveConfiguredProvider, resolveProviderConfig } from '../src/provider.js';
 import { createTempWorkspace } from './helpers.js';
 
 function withProviderEnv(env: Record<string, string | undefined>, callback: () => void) {
@@ -12,6 +12,8 @@ function withProviderEnv(env: Record<string, string | undefined>, callback: () =
     AGENT_COMMAND: process.env.AGENT_COMMAND,
     AGENT_COMMAND_ARGS: process.env.AGENT_COMMAND_ARGS,
     AGENT_TIMEOUT_MS: process.env.AGENT_TIMEOUT_MS,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    OPENAI_MODEL: process.env.OPENAI_MODEL,
   };
 
   for (const [key, value] of Object.entries(env)) {
@@ -40,6 +42,8 @@ test('provider config defaults to mock', () => withProviderEnv({
   assert.equal(config.command, null);
   assert.deepEqual(config.args, []);
   assert.equal(config.timeoutMs, null);
+  assert.equal(config.apiKey, null);
+  assert.equal(config.model, null);
   assert.equal(resolveConfiguredProvider() instanceof MockAgentProvider, true);
 }));
 
@@ -54,9 +58,29 @@ test('provider config parses shell settings', () => withProviderEnv({
   assert.equal(config.command, 'oracle-cli');
   assert.deepEqual(config.args, ['--mode', 'review', '--json']);
   assert.equal(config.timeoutMs, 15000);
+  assert.equal(config.apiKey, null);
+  assert.equal(config.model, null);
   const provider = resolveConfiguredProvider();
   assert.equal(provider instanceof ShellCommandAgentProvider, true);
   assert.equal(provider.command, 'oracle-cli');
+}));
+
+test('provider config parses openai settings', () => withProviderEnv({
+  AGENT_PROVIDER: 'openai',
+  OPENAI_API_KEY: 'sk-test',
+  OPENAI_MODEL: 'gpt-5.4-mini',
+  AGENT_TIMEOUT_MS: '45000',
+}, () => {
+  const config = resolveProviderConfig();
+  assert.equal(config.providerName, 'openai');
+  assert.equal(config.apiKey, 'sk-test');
+  assert.equal(config.model, 'gpt-5.4-mini');
+  assert.equal(config.timeoutMs, 45000);
+  assert.equal(config.command, null);
+  assert.deepEqual(config.args, []);
+  const provider = resolveConfiguredProvider();
+  assert.equal(provider instanceof OpenAIAgentProvider, true);
+  assert.equal(provider.model, 'gpt-5.4-mini');
 }));
 
 test('shell provider config requires command', () => withProviderEnv({
@@ -72,6 +96,22 @@ test('provider config rejects invalid timeout', () => withProviderEnv({
   AGENT_TIMEOUT_MS: 'not-a-number',
 }, () => {
   assert.throws(() => resolveProviderConfig(), /AGENT_TIMEOUT_MS must be a positive number/);
+}));
+
+test('openai provider config requires api key', () => withProviderEnv({
+  AGENT_PROVIDER: 'openai',
+  OPENAI_API_KEY: undefined,
+  OPENAI_MODEL: 'gpt-5.4-mini',
+}, () => {
+  assert.throws(() => resolveProviderConfig(), /OPENAI_API_KEY is not configured/);
+}));
+
+test('openai provider config requires model', () => withProviderEnv({
+  AGENT_PROVIDER: 'openai',
+  OPENAI_API_KEY: 'sk-test',
+  OPENAI_MODEL: undefined,
+}, () => {
+  assert.throws(() => resolveProviderConfig(), /OPENAI_MODEL is not configured/);
 }));
 
 test('provider config rejects unsupported provider names', () => withProviderEnv({
