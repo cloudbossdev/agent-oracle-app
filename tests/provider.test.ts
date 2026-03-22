@@ -197,3 +197,61 @@ test('shell provider surfaces timeout failures', async () => {
   const provider = new ShellCommandAgentProvider({ command: process.execPath, args: [scriptPath], timeoutMs: 50 });
   await assert.rejects(() => provider.execute(buildExecutionInput()), /Shell provider timed out after 50ms/);
 });
+
+test('openai provider executes configured client and parses JSON output', async () => {
+  const calls: Array<Record<string, unknown>> = [];
+  const provider = new OpenAIAgentProvider(
+    { apiKey: 'sk-test', model: 'gpt-5.4-mini', timeoutMs: 12000 },
+    {
+      responses: {
+        create: async (params: Record<string, unknown>) => {
+          calls.push(params);
+          return {
+            output_text: JSON.stringify({
+              summary: 'Real analysis summary',
+              response: 'Real analysis body',
+              risks: 'Primary risk',
+              nextStep: 'Proceed',
+            }),
+          };
+        },
+      },
+    },
+  );
+
+  const result = await provider.execute(buildExecutionInput());
+  assert.equal(result.summary, 'Real analysis summary');
+  assert.equal(result.response, 'Real analysis body');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].model, 'gpt-5.4-mini');
+  assert.equal(typeof calls[0].instructions, 'string');
+  assert.equal(calls[0].input, '# Agent Input\n\nTest prompt body');
+});
+
+test('openai provider rejects invalid JSON output', async () => {
+  const provider = new OpenAIAgentProvider(
+    { apiKey: 'sk-test', model: 'gpt-5.4-mini' },
+    {
+      responses: {
+        create: async () => ({ output_text: 'not-json' }),
+      },
+    },
+  );
+
+  await assert.rejects(() => provider.execute(buildExecutionInput()), /OpenAI provider returned invalid JSON/);
+});
+
+test('openai provider surfaces request failures clearly', async () => {
+  const provider = new OpenAIAgentProvider(
+    { apiKey: 'sk-test', model: 'gpt-5.4-mini' },
+    {
+      responses: {
+        create: async () => {
+          throw new Error('401 Unauthorized');
+        },
+      },
+    },
+  );
+
+  await assert.rejects(() => provider.execute(buildExecutionInput()), /OpenAI provider request failed: 401 Unauthorized/);
+});
