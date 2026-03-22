@@ -7,6 +7,18 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const AGENT_RESULT_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['summary', 'response', 'risks', 'nextStep'],
+  properties: {
+    summary: { type: 'string' },
+    response: { type: 'string' },
+    risks: { type: 'string' },
+    nextStep: { type: 'string' },
+  },
+};
+
 export function parseCommandArgs(value: string | undefined) {
   if (!value) return [];
   return value.split(/\s+/).map((item) => item.trim()).filter(Boolean);
@@ -218,11 +230,18 @@ export class OpenAIAgentProvider implements AgentProvider {
         model: this.model,
         instructions: [
           `You are ${input.agent.display_name}, acting as ${input.agent.role_name}.`,
-          'Return only one JSON object with the exact keys: summary, response, risks, nextStep.',
-          'Each field must be a non-empty string.',
-          'Do not wrap the JSON in markdown fences.',
+          'Use the provided response schema exactly.',
+          'Focus on producing a concise but useful role-specific review.',
         ].join(' '),
         input: input.inputText,
+        text: {
+          format: {
+            type: 'json_schema',
+            name: 'agent_review_result',
+            strict: true,
+            schema: AGENT_RESULT_SCHEMA,
+          },
+        },
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

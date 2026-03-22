@@ -226,6 +226,10 @@ test('openai provider executes configured client and parses JSON output', async 
   assert.equal(calls[0].model, 'gpt-5.4-mini');
   assert.equal(typeof calls[0].instructions, 'string');
   assert.equal(calls[0].input, '# Agent Input\n\nTest prompt body');
+  assert.equal(calls[0].text.format.type, 'json_schema');
+  assert.equal(calls[0].text.format.name, 'agent_review_result');
+  assert.equal(calls[0].text.format.strict, true);
+  assert.deepEqual(calls[0].text.format.schema.required, ['summary', 'response', 'risks', 'nextStep']);
 });
 
 test('openai provider rejects invalid JSON output', async () => {
@@ -239,6 +243,19 @@ test('openai provider rejects invalid JSON output', async () => {
   );
 
   await assert.rejects(() => provider.execute(buildExecutionInput()), /OpenAI provider returned invalid JSON/);
+});
+
+test('openai provider rejects missing structured fields', async () => {
+  const provider = new OpenAIAgentProvider(
+    { apiKey: 'sk-test', model: 'gpt-5.4-mini' },
+    {
+      responses: {
+        create: async () => ({ output_text: JSON.stringify({ summary: 'Only summary' }) }),
+      },
+    },
+  );
+
+  await assert.rejects(() => provider.execute(buildExecutionInput()), /missing string field "response"/);
 });
 
 test('openai provider surfaces request failures clearly', async () => {
