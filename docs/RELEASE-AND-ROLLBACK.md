@@ -81,6 +81,16 @@ Recommended rule:
 - use plain `vX.Y.Z` for accepted stable releases
 - use suffixes only when you need a clearly non-final marker
 
+For this repo, the practical baseline mapping is:
+
+- `v0.1.0` -> accepted MVP baseline
+- `v0.2.0` -> real provider integration baseline
+- `v0.3.0` -> user workflow and UX baseline
+
+That means the first stable tag to create after Milestone 3 is:
+
+- `v0.3.0`
+
 ## How To Create A Release Tag
 
 From updated `main`:
@@ -100,6 +110,23 @@ What this does:
 
 After pushing the tag, optionally create a GitHub release note entry if the
 project is using release notes for that milestone.
+
+For the current repo state, once the tagging rule is merged into `main`, the
+recommended first stable tag is:
+
+```bash
+git checkout main
+git pull --ff-only origin main
+git tag v0.3.0
+git push origin v0.3.0
+```
+
+Reason:
+
+- Milestone 3 is the latest completed product milestone
+- Milestone 4 is still in progress
+- `v0.3.0` gives the project its first named stable recovery point after the
+  user-facing workflow improvements
 
 ## How To Inspect An Older Version
 
