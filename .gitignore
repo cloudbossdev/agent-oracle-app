@@ -3,3 +3,6 @@ dist
 app.db
 runs
 *.log
+.tmp
+playwright-report
+test-results
