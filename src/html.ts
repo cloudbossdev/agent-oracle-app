@@ -73,6 +73,15 @@ export function renderIndexHtml(providerView) {
         </div>
         <div id="runError" class="error-banner hidden"></div>
       </div>
+      <div id="artifactPanel" class="artifact-panel hidden">
+        <div class="artifact-panel-header">
+          <div>
+            <h3>Run Artifacts</h3>
+            <p class="muted artifact-copy">These are the markdown and manifest files generated for the selected review run.</p>
+          </div>
+        </div>
+        <div id="artifactList" class="artifact-list"></div>
+      </div>
       <div id="steps" class="steps-list"></div>
     </section>
     <section class="panel top-gap">

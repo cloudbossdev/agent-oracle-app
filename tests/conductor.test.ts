@@ -23,6 +23,9 @@ test('integration: independent mode runs all four steps and writes markdown arti
   const atlasInput = fs.readFileSync(path.join(root, 'runs', run.run_folder, 'atlas-input.md'), 'utf8');
   assert.equal(run.steps.length, 4);
   assert.equal(run.steps.every((step: any) => step.status === 'completed'), true);
+  assert.equal(run.artifacts.length, 10);
+  assert.equal(run.artifacts.some((artifact: any) => artifact.artifact_type === 'question'), true);
+  assert.equal(run.artifacts.some((artifact: any) => artifact.file_path.endsWith('mosaic-output.md')), true);
   assert.equal(fs.existsSync(path.join(root, 'runs', run.run_folder, 'question.md')), true);
   assert.equal(fs.existsSync(path.join(root, 'runs', run.run_folder, 'atlas-input.md')), true);
   assert.equal(fs.existsSync(path.join(root, 'runs', run.run_folder, 'mosaic-output.md')), true);

@@ -90,6 +90,38 @@ button:disabled { opacity: 0.75; cursor: wait; }
 .summary-row.compact { align-items: center; flex-wrap: wrap; padding-top: 4px; border-top: 1px solid #e1e7f0; }
 .summary-title { font-size: 1.12rem; font-weight: 700; }
 .summary-question { margin-top: 6px; line-height: 1.5; max-width: 760px; }
+.artifact-panel {
+  margin-bottom: 18px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid #d8deea;
+  background: rgba(247, 249, 252, 0.9);
+}
+.artifact-panel-header h3 { margin: 0; font-size: 1rem; }
+.artifact-copy { margin: 6px 0 0; }
+.artifact-list { display: grid; gap: 10px; margin-top: 14px; }
+.artifact-card {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid #d8deea;
+  background: rgba(255,255,255,0.92);
+}
+.artifact-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+.artifact-type {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: #eef2f8;
+  color: #4c5d7e;
+  border: 1px solid #d7dfeb;
+}
+.artifact-path { word-break: break-word; line-height: 1.45; }
 .steps-list { display: grid; gap: 14px; }
 .step-card { border: 1px solid #d8deea; background: #fbfcff; border-radius: 14px; padding: 14px; }
 .step-card.status-running, .step-card.status-preparing { border-color: #7a8fd8; background: #f4f7ff; }

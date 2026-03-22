@@ -49,6 +49,7 @@ export interface ArtifactRecord {
 
 export interface RunDetail extends RunRecord {
   steps: Array<RunStepRecord & { agent: AgentRecord }>;
+  artifacts: ArtifactRecord[];
 }
 
 export interface AgentExecutionInput {

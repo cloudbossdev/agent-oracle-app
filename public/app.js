@@ -10,6 +10,8 @@ const runBadgeEl = document.getElementById('runBadge');
 const runProgressEl = document.getElementById('runProgress');
 const runTimingEl = document.getElementById('runTiming');
 const runErrorEl = document.getElementById('runError');
+const artifactPanelEl = document.getElementById('artifactPanel');
+const artifactListEl = document.getElementById('artifactList');
 const stepsEl = document.getElementById('steps');
 const finalOutputEl = document.getElementById('finalOutput');
 
@@ -73,6 +75,8 @@ function setRunEmptyState(message) {
   runStateEl.textContent = message;
   runStateEl.className = 'empty-state';
   runSummaryEl.classList.add('hidden');
+  artifactPanelEl.classList.add('hidden');
+  artifactListEl.innerHTML = '';
   stepsEl.innerHTML = '';
 }
 
@@ -120,6 +124,51 @@ function renderStepCard(step) {
   return card;
 }
 
+function formatArtifactType(type) {
+  return String(type).replaceAll('_', ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function getArtifactName(filePath) {
+  return String(filePath).split(/[\\/]/).pop();
+}
+
+function getArtifactRelativePath(run, filePath) {
+  const marker = `${run.run_folder}\\`;
+  const unixMarker = `${run.run_folder}/`;
+  if (String(filePath).includes(marker)) {
+    return String(filePath).split(marker).pop();
+  }
+  if (String(filePath).includes(unixMarker)) {
+    return String(filePath).split(unixMarker).pop();
+  }
+  return String(filePath);
+}
+
+function renderArtifacts(run) {
+  artifactListEl.innerHTML = '';
+
+  if (!run.artifacts?.length) {
+    artifactPanelEl.classList.add('hidden');
+    return;
+  }
+
+  artifactPanelEl.classList.remove('hidden');
+
+  for (const artifact of run.artifacts) {
+    const item = document.createElement('article');
+    item.className = 'artifact-card';
+    item.innerHTML = `
+      <div class="artifact-top">
+        <strong>${escapeHtml(getArtifactName(artifact.file_path))}</strong>
+        <span class="artifact-type">${formatArtifactType(artifact.artifact_type)}</span>
+      </div>
+      <div class="muted artifact-path">${escapeHtml(getArtifactRelativePath(run, artifact.file_path))}</div>
+      <div class="muted artifact-path">${escapeHtml(artifact.file_path)}</div>
+    `;
+    artifactListEl.appendChild(item);
+  }
+}
+
 function renderRun(run) {
   activeRunId = run.id;
   runStateEl.className = 'hidden';
@@ -131,6 +180,7 @@ function renderRun(run) {
   runProgressEl.textContent = `${describeWorkflowMode(run.workflow_mode)} | ${summarizeProgress(run)}`;
   runTimingEl.textContent = summarizeTiming(run);
   stepsEl.innerHTML = '';
+  renderArtifacts(run);
 
   const failedStep = run.steps.find((step) => step.status === 'failed' && step.error_text);
   if (failedStep) {

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { AGENT_SEED } from './agents.js';
 import { sqlInsert, sqlUpdate, sqliteExec, sqliteQuery } from './sqlite.js';
-import type { AgentRecord, RunDetail, RunRecord, RunStepRecord, Status, WorkflowMode } from './types.js';
+import type { AgentRecord, ArtifactRecord, RunDetail, RunRecord, RunStepRecord, Status, WorkflowMode } from './types.js';
 
 function now() {
   return new Date().toISOString();
@@ -112,6 +112,15 @@ export function recordArtifact(runId: number, agentId: number | null, artifactTy
   }));
 }
 
+export function listArtifactsForRun(runId: number): ArtifactRecord[] {
+  return sqliteQuery<ArtifactRecord>(`
+    SELECT id, run_id, agent_id, artifact_type, file_path, created_at
+    FROM artifacts
+    WHERE run_id = ${runId}
+    ORDER BY created_at ASC, id ASC;
+  `);
+}
+
 export function updateRunStatus(runId: number, status: Status) {
   sqliteExec(sqlUpdate('runs', { status, updated_at: now() }, `id = ${runId}`));
 }
@@ -150,6 +159,7 @@ export function getRunWithSteps(runId: number): RunDetail | undefined {
     WHERE rs.run_id = ${runId}
     ORDER BY rs.step_order ASC;
   `);
+  const artifacts = listArtifactsForRun(runId);
   return {
     ...run,
     steps: rows.map((row) => ({
@@ -176,5 +186,6 @@ export function getRunWithSteps(runId: number): RunDetail | undefined {
         enabled: row.enabled,
       },
     })),
+    artifacts,
   };
 }
