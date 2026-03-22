@@ -1,5 +1,5 @@
 // @ts-nocheck
-export function renderIndexHtml() {
+export function renderIndexHtml(providerView) {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -20,7 +20,14 @@ export function renderIndexHtml() {
     <div class="grid">
       <section class="panel">
         <h2>Question</h2>
-        <p class="panel-copy muted">Submit one question and run the fixed four-agent review workflow in independent or relay mode.</p>
+        <p class="panel-copy muted">Submit one question and run the fixed four-agent review workflow. Choose the mode based on whether reviewer steps should stay independent or build on each other.</p>
+        <div class="info-strip">
+          <div class="info-chip">
+            <span class="info-label">Current provider</span>
+            <strong>${providerView.label}</strong>
+          </div>
+          <div class="muted info-copy">${providerView.copy}</div>
+        </div>
         <textarea id="question">How should I build a local project planning tool on my laptop?</textarea>
         <div class="controls">
           <label>
@@ -32,10 +39,20 @@ export function renderIndexHtml() {
           </label>
           <button id="runButton">Run Review</button>
         </div>
+        <div class="mode-guide">
+          <div class="mode-card">
+            <div class="mode-title">Independent</div>
+            <p class="muted">Atlas, Sage, and Nova each answer from the original question only. Use this when you want parallel viewpoints without handoff bias.</p>
+          </div>
+          <div class="mode-card">
+            <div class="mode-title">Relay</div>
+            <p class="muted">Sage builds on Atlas, Nova builds on Sage, and Mosaic closes with the full chain. Use this when you want a deliberate step-by-step review.</p>
+          </div>
+        </div>
       </section>
       <section class="panel">
         <h2>Run History</h2>
-        <p class="panel-copy muted">Reopen earlier runs to compare status, question text, and final outputs.</p>
+        <p class="panel-copy muted">Reopen earlier reviews to compare questions, statuses, and the final synthesis from each saved run.</p>
         <div id="history" class="stack"></div>
       </section>
     </div>
@@ -60,7 +77,7 @@ export function renderIndexHtml() {
     </section>
     <section class="panel top-gap">
       <h2>Final Synthesis</h2>
-      <pre id="finalOutput" class="empty">Mosaic output will appear here after prior steps complete.</pre>
+      <pre id="finalOutput" class="empty">Mosaic's final synthesis will appear here after the reviewer steps finish.</pre>
     </section>
   </main>
   <script type="module" src="/app.js"></script>
