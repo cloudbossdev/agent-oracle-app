@@ -2,6 +2,7 @@ const questionInput = document.getElementById('question');
 const modeInput = document.getElementById('mode');
 const runButton = document.getElementById('runButton');
 const historyEl = document.getElementById('history');
+const historyToggleEl = document.getElementById('historyToggle');
 const runStateEl = document.getElementById('runState');
 const runSummaryEl = document.getElementById('runSummary');
 const runMetaEl = document.getElementById('runMeta');
@@ -34,6 +35,9 @@ const agentTabButtons = Array.from(document.querySelectorAll('[data-agent]'));
 let activeRunId = null;
 let pollTimer = null;
 let activeAgentName = 'atlas';
+let historyExpanded = false;
+
+const HISTORY_PREVIEW_COUNT = 3;
 
 async function request(url, options) {
   const response = await fetch(url, options);
@@ -366,10 +370,16 @@ async function loadHistory() {
 
   if (!runs.length) {
     historyEl.innerHTML = '<div class="empty-state small">No saved runs yet. Your completed reviews will appear here.</div>';
+    historyToggleEl.classList.add('hidden');
     return;
   }
 
-  for (const run of runs) {
+  historyToggleEl.classList.toggle('hidden', runs.length <= HISTORY_PREVIEW_COUNT);
+  historyToggleEl.textContent = historyExpanded ? 'Show Fewer' : 'Show All History';
+
+  const visibleRuns = historyExpanded ? runs : runs.slice(0, HISTORY_PREVIEW_COUNT);
+
+  for (const run of visibleRuns) {
     const button = document.createElement('button');
     button.className = `history-button ${activeRunId === run.id ? 'selected' : ''}`;
     const summaryText = run.failed_agent_name
@@ -398,6 +408,11 @@ async function loadHistory() {
     historyEl.appendChild(button);
   }
 }
+
+historyToggleEl?.addEventListener('click', async () => {
+  historyExpanded = !historyExpanded;
+  await loadHistory();
+});
 
 runButton.addEventListener('click', async () => {
   runButton.disabled = true;
