@@ -21,6 +21,8 @@ const finalSynthesisResponseEl = document.getElementById('finalSynthesisResponse
 const finalSynthesisRisksEl = document.getElementById('finalSynthesisRisks');
 const finalSynthesisNextStepEl = document.getElementById('finalSynthesisNextStep');
 const finalOutputEl = document.getElementById('finalOutput');
+const agentSummaryPanelEl = document.getElementById('agentSummaryPanel');
+const agentSummaryListEl = document.getElementById('agentSummaryList');
 const runPanelEl = document.getElementById('runPanel');
 const stepsPanelEl = document.getElementById('stepsPanel');
 const historyPanelEl = document.getElementById('historyPanel');
@@ -117,6 +119,8 @@ function setRunEmptyState(message) {
   runSummaryEl.classList.add('hidden');
   artifactListEl.innerHTML = '';
   stepsEl.innerHTML = '';
+  agentSummaryListEl.innerHTML = '';
+  agentSummaryPanelEl.classList.add('hidden');
   setDetailsView('run');
 }
 
@@ -172,6 +176,39 @@ function renderFinalSynthesis(step) {
   finalSynthesisNextStepEl.innerHTML = renderOutputSection('Recommended Next Step', parsed.nextStep);
   finalOutputEl.textContent = step.output_text;
   finalOutputEl.className = 'output-raw hidden';
+}
+
+function renderAgentSummaries(run) {
+  agentSummaryListEl.innerHTML = '';
+
+  if (!run?.steps?.length) {
+    agentSummaryPanelEl.classList.add('hidden');
+    return;
+  }
+
+  agentSummaryPanelEl.classList.remove('hidden');
+
+  for (const step of run.steps) {
+    const parsed = parseAgentOutput(step.output_text);
+    const card = document.createElement('article');
+    card.className = 'agent-summary-card';
+    card.innerHTML = `
+      <div class="agent-summary-top">
+        <div>
+          <div class="agent-summary-name">${escapeHtml(step.agent.display_name)}</div>
+          <div class="agent-summary-role">${escapeHtml(step.agent.role_name)}</div>
+        </div>
+        <span class="status-badge small ${statusClass(step.status)}">${formatStatus(step.status)}</span>
+      </div>
+      <div class="${parsed?.summary ? 'agent-summary-copy' : 'agent-summary-empty'}">
+        ${escapeHtml(parsed?.summary || 'No summary recorded yet for this step.')}
+      </div>
+    `;
+    card.addEventListener('click', () => {
+      setDetailsView('steps');
+    });
+    agentSummaryListEl.appendChild(card);
+  }
 }
 
 function renderStepCard(step) {
@@ -281,6 +318,7 @@ function renderRun(run) {
   runTimingEl.textContent = summarizeTiming(run);
   stepsEl.innerHTML = '';
   renderArtifacts(run);
+  renderAgentSummaries(run);
 
   const failedStep = run.steps.find((step) => step.status === 'failed' && step.error_text);
   if (failedStep) {

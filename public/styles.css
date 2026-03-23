@@ -15,7 +15,7 @@ body {
 h1 { margin: 0; font-size: clamp(2rem, 3vw, 3rem); line-height: 1.05; }
 .intro { max-width: 760px; margin-top: 12px; }
 .grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px; }
-.review-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(340px, 0.95fr); gap: 20px; align-items: start; }
+.composer-panel { max-width: 980px; }
 .workspace-side-header .panel-copy { margin-bottom: 0; }
 .panel {
   background: rgba(255,255,255,0.86);
@@ -141,6 +141,42 @@ button:disabled { opacity: 0.75; cursor: wait; }
 }
 .details-panel { padding-bottom: 20px; }
 .details-view.hidden { display: none; }
+.agent-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.agent-summary-card {
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid #d8deea;
+  background: rgba(255,255,255,0.92);
+}
+.agent-summary-top {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.agent-summary-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.agent-summary-role {
+  font-size: 0.82rem;
+  color: #5d6880;
+  line-height: 1.4;
+}
+.agent-summary-copy {
+  line-height: 1.5;
+  color: #24324f;
+}
+.agent-summary-empty {
+  color: #5d6880;
+  line-height: 1.45;
+}
 .details-section-copy,
 .history-panel-copy {
   margin-bottom: 14px;
@@ -253,7 +289,7 @@ pre {
 
 @media (max-width: 900px) {
   .grid { grid-template-columns: 1fr; }
-  .review-grid { grid-template-columns: 1fr; }
+  .agent-summary-grid { grid-template-columns: 1fr; }
   .summary-row { flex-direction: column; }
   .controls { flex-direction: column; align-items: stretch; }
   .mode-guide { grid-template-columns: 1fr; }

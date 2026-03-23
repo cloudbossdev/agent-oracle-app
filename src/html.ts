@@ -17,63 +17,70 @@ export function renderIndexHtml(providerView) {
         <p class="muted intro">Single-user local review workflow with SQLite-backed history, markdown artifacts, and live run polling.</p>
       </div>
     </header>
-    <div class="review-grid">
-      <section class="panel">
-        <h2>Question</h2>
-        <p class="panel-copy muted">Submit one question and run the fixed four-agent review workflow. Choose the mode based on whether reviewer steps should stay independent or build on each other.</p>
-        <div class="info-strip">
-          <div class="info-chip">
-            <span class="info-label">Current provider</span>
-            <strong>${providerView.label}</strong>
-          </div>
-          <div class="muted info-copy">${providerView.copy}</div>
+    <section class="panel composer-panel">
+      <h2>Question</h2>
+      <p class="panel-copy muted">Submit one question and run the fixed four-agent review workflow. Choose the mode based on whether reviewer steps should stay independent or build on each other.</p>
+      <div class="info-strip">
+        <div class="info-chip">
+          <span class="info-label">Current provider</span>
+          <strong>${providerView.label}</strong>
         </div>
-        <textarea id="question">How should I build a local project planning tool on my laptop?</textarea>
-        <div class="controls">
-          <label>
-            <span class="muted">Workflow mode</span>
-            <select id="mode">
-              <option value="independent">Independent</option>
-              <option value="relay">Relay</option>
-            </select>
-          </label>
-          <button id="runButton">Run Review</button>
+        <div class="muted info-copy">${providerView.copy}</div>
+      </div>
+      <textarea id="question">How should I build a local project planning tool on my laptop?</textarea>
+      <div class="controls">
+        <label>
+          <span class="muted">Workflow mode</span>
+          <select id="mode">
+            <option value="independent">Independent</option>
+            <option value="relay">Relay</option>
+          </select>
+        </label>
+        <button id="runButton">Run Review</button>
+      </div>
+      <div class="mode-guide">
+        <div class="mode-card">
+          <div class="mode-title">Independent</div>
+          <p class="muted">Atlas, Sage, and Nova each answer from the original question only. Use this when you want parallel viewpoints without handoff bias.</p>
         </div>
-        <div class="mode-guide">
-          <div class="mode-card">
-            <div class="mode-title">Independent</div>
-            <p class="muted">Atlas, Sage, and Nova each answer from the original question only. Use this when you want parallel viewpoints without handoff bias.</p>
-          </div>
-          <div class="mode-card">
-            <div class="mode-title">Relay</div>
-            <p class="muted">Sage builds on Atlas, Nova builds on Sage, and Mosaic closes with the full chain. Use this when you want a deliberate step-by-step review.</p>
-          </div>
+        <div class="mode-card">
+          <div class="mode-title">Relay</div>
+          <p class="muted">Sage builds on Atlas, Nova builds on Sage, and Mosaic closes with the full chain. Use this when you want a deliberate step-by-step review.</p>
         </div>
-      </section>
-      <section class="panel">
-        <div class="workspace-side-header">
+      </div>
+    </section>
+    <section class="panel top-gap">
+      <div class="workspace-side-header">
+        <div>
+          <h2>Final Synthesis</h2>
+          <p class="panel-copy muted">Keep the main outcome visible while you review the run details and compare the agent takeaways underneath.</p>
+        </div>
+      </div>
+      <div id="finalSynthesisCard" class="synthesis-card hidden">
+        <div class="synthesis-header">
           <div>
-            <h2>Final Synthesis</h2>
-            <p class="panel-copy muted">Keep the main outcome visible while you review the run details underneath.</p>
+            <div id="finalSynthesisAgent" class="synthesis-agent"></div>
+            <div id="finalSynthesisSummary" class="synthesis-summary"></div>
           </div>
+          <div id="finalSynthesisStatus" class="status-badge small"></div>
         </div>
-        <div id="finalSynthesisCard" class="synthesis-card hidden">
-          <div class="synthesis-header">
-            <div>
-              <div id="finalSynthesisAgent" class="synthesis-agent"></div>
-              <div id="finalSynthesisSummary" class="synthesis-summary"></div>
-            </div>
-            <div id="finalSynthesisStatus" class="status-badge small"></div>
-          </div>
-          <div id="finalSynthesisResponse" class="synthesis-section"></div>
-          <div class="synthesis-grid">
-            <div id="finalSynthesisRisks" class="synthesis-section"></div>
-            <div id="finalSynthesisNextStep" class="synthesis-section"></div>
-          </div>
+        <div id="finalSynthesisResponse" class="synthesis-section"></div>
+        <div class="synthesis-grid">
+          <div id="finalSynthesisRisks" class="synthesis-section"></div>
+          <div id="finalSynthesisNextStep" class="synthesis-section"></div>
         </div>
-        <pre id="finalOutput" class="empty">Mosaic's final synthesis will appear here after the reviewer steps finish.</pre>
-      </section>
-    </div>
+      </div>
+      <pre id="finalOutput" class="empty">Mosaic's final synthesis will appear here after the reviewer steps finish.</pre>
+    </section>
+    <section id="agentSummaryPanel" class="panel top-gap hidden">
+      <div class="details-header">
+        <div>
+          <h2>Agent Takeaways</h2>
+          <p class="panel-copy muted">See each role's top-line answer without opening the full step details.</p>
+        </div>
+      </div>
+      <div id="agentSummaryList" class="agent-summary-grid"></div>
+    </section>
     <section id="workspace" class="panel top-gap details-panel">
       <div class="details-header">
         <div>
