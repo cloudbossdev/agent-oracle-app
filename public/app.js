@@ -1,7 +1,9 @@
 const questionInput = document.getElementById('question');
 const modeInput = document.getElementById('mode');
 const runButton = document.getElementById('runButton');
+const questionPanelEl = document.getElementById('questionPanel');
 const historyEl = document.getElementById('history');
+const historyToggleEl = document.getElementById('historyToggle');
 const runStateEl = document.getElementById('runState');
 const runSummaryEl = document.getElementById('runSummary');
 const runMetaEl = document.getElementById('runMeta');
@@ -11,8 +13,19 @@ const runProgressEl = document.getElementById('runProgress');
 const runTimingEl = document.getElementById('runTiming');
 const runErrorEl = document.getElementById('runError');
 const artifactPanelEl = document.getElementById('artifactPanel');
+const artifactCopyEl = document.getElementById('artifactCopy');
 const artifactListEl = document.getElementById('artifactList');
+const artifactToggleEl = document.getElementById('artifactToggle');
 const stepsEl = document.getElementById('steps');
+const agentChooserEl = document.getElementById('agentChooser');
+const agentOutputEmptyEl = document.getElementById('agentOutputEmpty');
+const agentOutputPanelEl = document.getElementById('agentOutputPanel');
+const agentOutputNameEl = document.getElementById('agentOutputName');
+const agentOutputRoleEl = document.getElementById('agentOutputRole');
+const agentOutputStatusEl = document.getElementById('agentOutputStatus');
+const agentOutputStartedEl = document.getElementById('agentOutputStarted');
+const agentOutputCompletedEl = document.getElementById('agentOutputCompleted');
+const agentOutputBodyEl = document.getElementById('agentOutputBody');
 const finalSynthesisCardEl = document.getElementById('finalSynthesisCard');
 const finalSynthesisAgentEl = document.getElementById('finalSynthesisAgent');
 const finalSynthesisSummaryEl = document.getElementById('finalSynthesisSummary');
@@ -24,6 +37,12 @@ const finalOutputEl = document.getElementById('finalOutput');
 
 let activeRunId = null;
 let pollTimer = null;
+let activeAgentName = 'atlas';
+let currentRun = null;
+let historyExpanded = false;
+let artifactsExpanded = false;
+
+const HISTORY_PREVIEW_COUNT = 3;
 
 async function request(url, options) {
   const response = await fetch(url, options);
@@ -84,13 +103,25 @@ function describeWorkflowMode(mode) {
     : 'Independent review';
 }
 
+function setQuestionPanelCompact(isCompact) {
+  questionPanelEl?.classList.toggle('compact-panel', isCompact);
+}
+
 function setRunEmptyState(message) {
+  currentRun = null;
   runStateEl.textContent = message;
   runStateEl.className = 'empty-state';
   runSummaryEl.classList.add('hidden');
   artifactPanelEl.classList.add('hidden');
+  artifactToggleEl.classList.add('hidden');
   artifactListEl.innerHTML = '';
+  stepsEl.classList.add('hidden');
   stepsEl.innerHTML = '';
+  agentChooserEl.classList.add('hidden');
+  agentChooserEl.innerHTML = '';
+  agentOutputEmptyEl.textContent = message;
+  agentOutputEmptyEl.classList.remove('hidden');
+  agentOutputPanelEl.classList.add('hidden');
 }
 
 function escapeHtml(input) {
@@ -145,6 +176,117 @@ function renderFinalSynthesis(step) {
   finalSynthesisNextStepEl.innerHTML = renderOutputSection('Recommended Next Step', parsed.nextStep);
   finalOutputEl.textContent = step.output_text;
   finalOutputEl.className = 'output-raw hidden';
+}
+
+function getAgentInitials(step) {
+  const source = step.agent.display_name || step.agent.system_name || '';
+  return source
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+function summarizeAgentStep(step) {
+  if (step.error_text) return step.error_text;
+  const parsed = parseAgentOutput(step.output_text);
+  if (parsed?.summary) return parsed.summary;
+  if (step.output_text) return step.output_text;
+  if (step.status === 'running' || step.status === 'preparing') return 'Response in progress.';
+  if (step.status === 'completed') return 'Completed without a structured summary.';
+  return 'Waiting for this step to run.';
+}
+
+function renderAgentBody(step) {
+  const parsedOutput = parseAgentOutput(step.output_text);
+  if (parsedOutput) {
+    return `
+      <div class="step-body-layout">
+        ${renderOutputSection('Summary', parsedOutput.summary, 'output-summary')}
+        ${renderOutputSection('Response', parsedOutput.response)}
+        ${renderOutputSection('Risks / Caveats', parsedOutput.risks)}
+        ${renderOutputSection('Recommended Next Step', parsedOutput.nextStep)}
+      </div>
+    `;
+  }
+  if (step.output_text) {
+    return `
+      <div class="step-section">
+        <div class="section-label">Output</div>
+        <pre>${escapeHtml(step.output_text)}</pre>
+      </div>
+    `;
+  }
+  if (step.error_text) {
+    return `
+      <div class="step-section">
+        <div class="section-label error-label">Error</div>
+        <pre class="error-pre">${escapeHtml(step.error_text)}</pre>
+      </div>
+    `;
+  }
+  return '<div class="muted">No output recorded yet for this step.</div>';
+}
+
+function renderAgentOutput(run) {
+  const step = run.steps.find((item) => item.agent.system_name === activeAgentName) ?? run.steps[0];
+  if (!step) {
+    agentChooserEl.classList.add('hidden');
+    agentOutputEmptyEl.classList.remove('hidden');
+    agentOutputPanelEl.classList.add('hidden');
+    return;
+  }
+
+  activeAgentName = step.agent.system_name;
+  agentOutputEmptyEl.classList.add('hidden');
+  agentOutputPanelEl.classList.remove('hidden');
+  agentOutputNameEl.textContent = step.agent.display_name;
+  agentOutputRoleEl.textContent = step.agent.role_name;
+  agentOutputStatusEl.textContent = formatStatus(step.status);
+  agentOutputStatusEl.className = `status-badge ${statusClass(step.status)}`;
+  agentOutputStartedEl.textContent = `Started: ${formatDateTime(step.started_at)}`;
+  agentOutputCompletedEl.textContent = `Completed: ${formatDateTime(step.completed_at)}`;
+  agentOutputBodyEl.innerHTML = renderAgentBody(step);
+}
+
+function renderAgentChooser(run) {
+  agentChooserEl.innerHTML = '';
+
+  if (!run.steps?.length) {
+    agentChooserEl.classList.add('hidden');
+    return;
+  }
+
+  agentChooserEl.classList.remove('hidden');
+
+  for (const step of run.steps) {
+    const button = document.createElement('button');
+    const preview = summarizeAgentStep(step);
+    const isSelected = step.agent.system_name === activeAgentName;
+    button.type = 'button';
+    button.className = `agent-chip ${isSelected ? 'selected' : ''} ${statusClass(step.status)}`;
+    button.innerHTML = `
+      <div class="agent-chip-top">
+        <div class="agent-chip-identity">
+          <span class="agent-avatar">${escapeHtml(getAgentInitials(step))}</span>
+          <div>
+            <div class="agent-chip-name">${escapeHtml(step.agent.display_name)}</div>
+            <div class="agent-chip-role">${escapeHtml(step.agent.role_name)}</div>
+          </div>
+        </div>
+        <span class="status-badge small ${statusClass(step.status)}">${formatStatus(step.status)}</span>
+      </div>
+      <div class="agent-chip-preview">${escapeHtml(String(preview).slice(0, 140))}</div>
+    `;
+    button.addEventListener('click', () => {
+      activeAgentName = step.agent.system_name;
+      renderAgentChooser(run);
+      renderAgentOutput(run);
+    });
+    agentChooserEl.appendChild(button);
+  }
 }
 
 function renderStepCard(step) {
@@ -224,10 +366,23 @@ function renderArtifacts(run) {
 
   if (!run.artifacts?.length) {
     artifactPanelEl.classList.add('hidden');
+    artifactToggleEl.classList.add('hidden');
     return;
   }
 
   artifactPanelEl.classList.remove('hidden');
+  artifactToggleEl.classList.remove('hidden');
+  artifactToggleEl.textContent = artifactsExpanded ? 'Hide Files' : `Show ${run.artifacts.length} Files`;
+  artifactCopyEl.textContent = artifactsExpanded
+    ? 'These are the markdown and manifest files generated for the selected review run.'
+    : `${run.artifacts.length} generated files are available for this run. Open the list only when you need the file-level details.`;
+
+  if (!artifactsExpanded) {
+    artifactListEl.classList.add('hidden');
+    return;
+  }
+
+  artifactListEl.classList.remove('hidden');
 
   for (const artifact of run.artifacts) {
     const item = document.createElement('article');
@@ -246,6 +401,8 @@ function renderArtifacts(run) {
 
 function renderRun(run) {
   activeRunId = run.id;
+  currentRun = run;
+  setQuestionPanelCompact(true);
   runStateEl.className = 'hidden';
   runSummaryEl.classList.remove('hidden');
   runMetaEl.textContent = `Review Run #${run.id}`;
@@ -268,10 +425,11 @@ function renderRun(run) {
 
   const mosaic = run.steps.find((step) => step.agent.system_name === 'mosaic');
   renderFinalSynthesis(mosaic);
+  renderAgentChooser(run);
+  renderAgentOutput(run);
 
-  for (const step of run.steps) {
-    stepsEl.appendChild(renderStepCard(step));
-  }
+  stepsEl.classList.add('hidden');
+  stepsEl.innerHTML = '';
 
   if (pollTimer) clearInterval(pollTimer);
   if (run.status !== 'completed' && run.status !== 'failed') {
@@ -289,10 +447,16 @@ async function loadHistory() {
 
   if (!runs.length) {
     historyEl.innerHTML = '<div class="empty-state small">No saved runs yet. Your completed reviews will appear here.</div>';
+    historyToggleEl.classList.add('hidden');
     return;
   }
 
-  for (const run of runs) {
+  historyToggleEl.classList.toggle('hidden', runs.length <= HISTORY_PREVIEW_COUNT);
+  historyToggleEl.textContent = historyExpanded ? 'Show Fewer' : 'Show All History';
+
+  const visibleRuns = historyExpanded ? runs : runs.slice(0, HISTORY_PREVIEW_COUNT);
+
+  for (const run of visibleRuns) {
     const button = document.createElement('button');
     button.className = `history-button ${activeRunId === run.id ? 'selected' : ''}`;
     const summaryText = run.failed_agent_name
@@ -315,6 +479,7 @@ async function loadHistory() {
       <div class="history-question">${escapeHtml(run.question_text.slice(0, 120))}</div>
     `;
     button.addEventListener('click', async () => {
+      artifactsExpanded = false;
       renderRun(await request(`/api/runs/${run.id}`));
       await loadHistory();
     });
@@ -322,9 +487,21 @@ async function loadHistory() {
   }
 }
 
+artifactToggleEl?.addEventListener('click', () => {
+  if (!currentRun) return;
+  artifactsExpanded = !artifactsExpanded;
+  renderArtifacts(currentRun);
+});
+
+historyToggleEl?.addEventListener('click', async () => {
+  historyExpanded = !historyExpanded;
+  await loadHistory();
+});
+
 runButton.addEventListener('click', async () => {
   runButton.disabled = true;
   runButton.textContent = 'Starting...';
+  setQuestionPanelCompact(true);
   setRunEmptyState('Starting a new run...');
 
   try {
@@ -333,6 +510,7 @@ runButton.addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ questionText: questionInput.value, workflowMode: modeInput.value }),
     });
+    artifactsExpanded = false;
     renderRun(await request(`/api/runs/${payload.runId}`));
     await loadHistory();
   } catch (error) {
@@ -345,4 +523,5 @@ runButton.addEventListener('click', async () => {
 });
 
 historyEl.innerHTML = '<div class="empty-state small">Loading run history...</div>';
+setQuestionPanelCompact(false);
 loadHistory();

@@ -17,72 +17,37 @@ export function renderIndexHtml(providerView) {
         <p class="muted intro">Single-user local review workflow with SQLite-backed history, markdown artifacts, and live run polling.</p>
       </div>
     </header>
-    <div class="grid">
-      <section class="panel">
-        <h2>Question</h2>
-        <p class="panel-copy muted">Submit one question and run the fixed four-agent review workflow. Choose the mode based on whether reviewer steps should stay independent or build on each other.</p>
-        <div class="info-strip">
-          <div class="info-chip">
-            <span class="info-label">Current provider</span>
-            <strong>${providerView.label}</strong>
-          </div>
-          <div class="muted info-copy">${providerView.copy}</div>
+    <section id="questionPanel" class="panel">
+      <h2>Question</h2>
+      <p class="panel-copy muted">Submit one question and run the fixed four-agent review workflow. Choose the mode based on whether reviewer steps should stay independent or build on each other.</p>
+      <div class="info-strip">
+        <div class="info-chip">
+          <span class="info-label">Current provider</span>
+          <strong>${providerView.label}</strong>
         </div>
-        <textarea id="question">How should I build a local project planning tool on my laptop?</textarea>
-        <div class="controls">
-          <label>
-            <span class="muted">Workflow mode</span>
-            <select id="mode">
-              <option value="independent">Independent</option>
-              <option value="relay">Relay</option>
-            </select>
-          </label>
-          <button id="runButton">Run Review</button>
-        </div>
-        <div class="mode-guide">
-          <div class="mode-card">
-            <div class="mode-title">Independent</div>
-            <p class="muted">Atlas, Sage, and Nova each answer from the original question only. Use this when you want parallel viewpoints without handoff bias.</p>
-          </div>
-          <div class="mode-card">
-            <div class="mode-title">Relay</div>
-            <p class="muted">Sage builds on Atlas, Nova builds on Sage, and Mosaic closes with the full chain. Use this when you want a deliberate step-by-step review.</p>
-          </div>
-        </div>
-      </section>
-      <section class="panel">
-        <h2>Run History</h2>
-        <p class="panel-copy muted">Reopen earlier reviews to compare questions, statuses, and the final synthesis from each saved run.</p>
-        <div id="history" class="stack"></div>
-      </section>
-    </div>
-    <section class="panel top-gap">
-      <h2>Current Run</h2>
-      <div id="runState" class="empty-state">No run selected yet. Start a run or reopen one from history.</div>
-      <div id="runSummary" class="run-summary hidden">
-        <div class="summary-row">
-          <div>
-            <div id="runMeta" class="summary-title"></div>
-            <div id="runQuestion" class="muted summary-question"></div>
-          </div>
-          <div id="runBadge" class="status-badge">Queued</div>
-        </div>
-        <div class="summary-row compact">
-          <div id="runProgress" class="muted"></div>
-          <div id="runTiming" class="muted"></div>
-        </div>
-        <div id="runError" class="error-banner hidden"></div>
+        <div class="muted info-copy">${providerView.copy}</div>
       </div>
-      <div id="artifactPanel" class="artifact-panel hidden">
-        <div class="artifact-panel-header">
-          <div>
-            <h3>Run Artifacts</h3>
-            <p class="muted artifact-copy">These are the markdown and manifest files generated for the selected review run.</p>
-          </div>
-        </div>
-        <div id="artifactList" class="artifact-list"></div>
+      <textarea id="question">How should I build a local project planning tool on my laptop?</textarea>
+      <div class="controls">
+        <label>
+          <span class="muted">Workflow mode</span>
+          <select id="mode">
+            <option value="independent">Independent</option>
+            <option value="relay">Relay</option>
+          </select>
+        </label>
+        <button id="runButton">Run Review</button>
       </div>
-      <div id="steps" class="steps-list"></div>
+      <div class="mode-guide">
+        <div class="mode-card">
+          <div class="mode-title">Independent</div>
+          <p class="muted">Atlas, Sage, and Nova each answer from the original question only. Use this when you want parallel viewpoints without handoff bias.</p>
+        </div>
+        <div class="mode-card">
+          <div class="mode-title">Relay</div>
+          <p class="muted">Sage builds on Atlas, Nova builds on Sage, and Mosaic closes with the full chain. Use this when you want a deliberate step-by-step review.</p>
+        </div>
+      </div>
     </section>
     <section class="panel top-gap">
       <h2>Final Synthesis</h2>
@@ -101,6 +66,71 @@ export function renderIndexHtml(providerView) {
         </div>
       </div>
       <pre id="finalOutput" class="empty">Mosaic's final synthesis will appear here after the reviewer steps finish.</pre>
+    </section>
+    <section class="panel top-gap">
+      <h2>Current Run</h2>
+      <div id="runState" class="empty-state">No run selected yet. Start a run or reopen one from history.</div>
+      <div id="runSummary" class="run-summary hidden">
+        <div class="summary-row">
+          <div>
+            <div id="runMeta" class="summary-title"></div>
+            <div id="runQuestion" class="muted summary-question"></div>
+          </div>
+          <div id="runBadge" class="status-badge">Queued</div>
+        </div>
+        <div class="summary-row compact">
+          <div id="runProgress" class="muted"></div>
+          <div id="runTiming" class="muted"></div>
+        </div>
+        <div id="runError" class="error-banner hidden"></div>
+      </div>
+    </section>
+    <section class="panel top-gap">
+      <div class="details-header">
+        <div>
+          <h2>Agent Outputs</h2>
+          <p class="panel-copy muted">See each reviewer at a glance, then open one full response at a time.</p>
+        </div>
+      </div>
+      <div id="agentChooser" class="agent-chooser hidden"></div>
+      <div id="agentOutputEmpty" class="empty-state small">Start a run or reopen one from history to inspect agent outputs.</div>
+      <div id="agentOutputPanel" class="step-card hidden">
+        <div class="step-header">
+          <div>
+            <div id="agentOutputName" class="step-title"></div>
+            <div id="agentOutputRole" class="muted"></div>
+          </div>
+          <span id="agentOutputStatus" class="status-badge"></span>
+        </div>
+        <div class="step-meta">
+          <span id="agentOutputStarted"></span>
+          <span id="agentOutputCompleted"></span>
+        </div>
+        <div id="agentOutputBody"></div>
+      </div>
+    </section>
+    <section class="panel top-gap">
+      <div id="artifactPanel" class="artifact-panel hidden">
+        <div class="artifact-panel-header">
+          <div>
+            <h3>Run Artifacts</h3>
+            <p id="artifactCopy" class="muted artifact-copy">These are the markdown and manifest files generated for the selected review run.</p>
+          </div>
+          <button id="artifactToggle" class="secondary-button hidden" type="button">Show Files</button>
+        </div>
+        <div id="artifactList" class="artifact-list"></div>
+      </div>
+      <div id="steps" class="steps-list hidden"></div>
+    </section>
+    <section class="panel top-gap">
+      <div class="history-panel-header">
+        <div>
+          <h2>Run History</h2>
+          <p class="panel-copy muted">Reopen earlier reviews to compare questions, statuses, and the final synthesis from each saved run.</p>
+        </div>
+        <button id="historyToggle" class="secondary-button" type="button">Show All History</button>
+      </div>
+      <div id="history" class="stack"></div>
     </section>
   </main>
   <script type="module" src="/app.js"></script>
