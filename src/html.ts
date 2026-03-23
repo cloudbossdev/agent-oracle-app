@@ -56,52 +56,65 @@ export function renderIndexHtml(providerView) {
         <div id="history" class="stack"></div>
       </section>
     </div>
-    <section class="panel top-gap">
-      <h2>Current Run</h2>
-      <div id="runState" class="empty-state">No run selected yet. Start a run or reopen one from history.</div>
-      <div id="runSummary" class="run-summary hidden">
-        <div class="summary-row">
-          <div>
-            <div id="runMeta" class="summary-title"></div>
-            <div id="runQuestion" class="muted summary-question"></div>
+    <div id="workspace" class="workspace-grid top-gap">
+      <section class="panel workspace-main">
+        <h2>Current Run</h2>
+        <div id="runState" class="empty-state">No run selected yet. Start a run or reopen one from history.</div>
+        <div id="runSummary" class="run-summary hidden">
+          <div class="summary-row">
+            <div>
+              <div id="runMeta" class="summary-title"></div>
+              <div id="runQuestion" class="muted summary-question"></div>
+            </div>
+            <div id="runBadge" class="status-badge">Queued</div>
           </div>
-          <div id="runBadge" class="status-badge">Queued</div>
+          <div class="summary-row compact">
+            <div id="runProgress" class="muted"></div>
+            <div id="runTiming" class="muted"></div>
+          </div>
+          <div id="runError" class="error-banner hidden"></div>
         </div>
-        <div class="summary-row compact">
-          <div id="runProgress" class="muted"></div>
-          <div id="runTiming" class="muted"></div>
+        <div id="artifactPanel" class="artifact-panel hidden">
+          <div class="artifact-panel-header">
+            <div>
+              <h3>Run Artifacts</h3>
+              <p class="muted artifact-copy">These are the markdown and manifest files generated for the selected review run.</p>
+            </div>
+          </div>
+          <div id="artifactList" class="artifact-list"></div>
         </div>
-        <div id="runError" class="error-banner hidden"></div>
-      </div>
-      <div id="artifactPanel" class="artifact-panel hidden">
-        <div class="artifact-panel-header">
+        <div class="details-header">
           <div>
-            <h3>Run Artifacts</h3>
-            <p class="muted artifact-copy">These are the markdown and manifest files generated for the selected review run.</p>
+            <h3>Step Details</h3>
+            <p class="muted artifact-copy">Each agent step remains available here for deeper inspection after the summary is ready.</p>
           </div>
         </div>
-        <div id="artifactList" class="artifact-list"></div>
-      </div>
-      <div id="steps" class="steps-list"></div>
-    </section>
-    <section class="panel top-gap">
-      <h2>Final Synthesis</h2>
-      <div id="finalSynthesisCard" class="synthesis-card hidden">
-        <div class="synthesis-header">
+        <div id="steps" class="steps-list"></div>
+      </section>
+      <section class="panel workspace-side">
+        <div class="workspace-side-header">
           <div>
-            <div id="finalSynthesisAgent" class="synthesis-agent"></div>
-            <div id="finalSynthesisSummary" class="synthesis-summary"></div>
+            <h2>Final Synthesis</h2>
+            <p class="panel-copy muted">Keep the main outcome in view while the run progresses or while you inspect earlier reviews.</p>
           </div>
-          <div id="finalSynthesisStatus" class="status-badge small"></div>
         </div>
-        <div id="finalSynthesisResponse" class="synthesis-section"></div>
-        <div class="synthesis-grid">
-          <div id="finalSynthesisRisks" class="synthesis-section"></div>
-          <div id="finalSynthesisNextStep" class="synthesis-section"></div>
+        <div id="finalSynthesisCard" class="synthesis-card hidden">
+          <div class="synthesis-header">
+            <div>
+              <div id="finalSynthesisAgent" class="synthesis-agent"></div>
+              <div id="finalSynthesisSummary" class="synthesis-summary"></div>
+            </div>
+            <div id="finalSynthesisStatus" class="status-badge small"></div>
+          </div>
+          <div id="finalSynthesisResponse" class="synthesis-section"></div>
+          <div class="synthesis-grid">
+            <div id="finalSynthesisRisks" class="synthesis-section"></div>
+            <div id="finalSynthesisNextStep" class="synthesis-section"></div>
+          </div>
         </div>
-      </div>
-      <pre id="finalOutput" class="empty">Mosaic's final synthesis will appear here after the reviewer steps finish.</pre>
-    </section>
+        <pre id="finalOutput" class="empty">Mosaic's final synthesis will appear here after the reviewer steps finish.</pre>
+      </section>
+    </div>
   </main>
   <script type="module" src="/app.js"></script>
 </body>

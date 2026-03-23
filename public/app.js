@@ -21,6 +21,7 @@ const finalSynthesisResponseEl = document.getElementById('finalSynthesisResponse
 const finalSynthesisRisksEl = document.getElementById('finalSynthesisRisks');
 const finalSynthesisNextStepEl = document.getElementById('finalSynthesisNextStep');
 const finalOutputEl = document.getElementById('finalOutput');
+const workspaceEl = document.getElementById('workspace');
 
 let activeRunId = null;
 let pollTimer = null;
@@ -334,6 +335,7 @@ runButton.addEventListener('click', async () => {
       body: JSON.stringify({ questionText: questionInput.value, workflowMode: modeInput.value }),
     });
     renderRun(await request(`/api/runs/${payload.runId}`));
+    workspaceEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     await loadHistory();
   } catch (error) {
     setRunEmptyState(`Unable to start run: ${error.message}`);

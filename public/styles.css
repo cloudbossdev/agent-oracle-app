@@ -15,6 +15,14 @@ body {
 h1 { margin: 0; font-size: clamp(2rem, 3vw, 3rem); line-height: 1.05; }
 .intro { max-width: 760px; margin-top: 12px; }
 .grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px; }
+.workspace-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr); gap: 20px; align-items: start; }
+.workspace-main { min-width: 0; }
+.workspace-side {
+  min-width: 0;
+  position: sticky;
+  top: 24px;
+}
+.workspace-side-header .panel-copy { margin-bottom: 0; }
 .panel {
   background: rgba(255,255,255,0.86);
   border: 1px solid #d8deea;
@@ -114,6 +122,14 @@ button:disabled { opacity: 0.75; cursor: wait; }
 }
 .artifact-panel-header h3 { margin: 0; font-size: 1rem; }
 .artifact-copy { margin: 6px 0 0; }
+.details-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.details-header h3 { margin: 0; font-size: 1rem; }
 .artifact-list { display: grid; gap: 10px; margin-top: 14px; }
 .artifact-card {
   padding: 12px 14px;
@@ -221,6 +237,8 @@ pre {
 
 @media (max-width: 900px) {
   .grid { grid-template-columns: 1fr; }
+  .workspace-grid { grid-template-columns: 1fr; }
+  .workspace-side { position: static; }
   .summary-row { flex-direction: column; }
   .controls { flex-direction: column; align-items: stretch; }
   .mode-guide { grid-template-columns: 1fr; }
