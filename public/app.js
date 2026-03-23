@@ -13,6 +13,14 @@ const runErrorEl = document.getElementById('runError');
 const artifactPanelEl = document.getElementById('artifactPanel');
 const artifactListEl = document.getElementById('artifactList');
 const stepsEl = document.getElementById('steps');
+const agentOutputEmptyEl = document.getElementById('agentOutputEmpty');
+const agentOutputPanelEl = document.getElementById('agentOutputPanel');
+const agentOutputNameEl = document.getElementById('agentOutputName');
+const agentOutputRoleEl = document.getElementById('agentOutputRole');
+const agentOutputStatusEl = document.getElementById('agentOutputStatus');
+const agentOutputStartedEl = document.getElementById('agentOutputStarted');
+const agentOutputCompletedEl = document.getElementById('agentOutputCompleted');
+const agentOutputBodyEl = document.getElementById('agentOutputBody');
 const finalSynthesisCardEl = document.getElementById('finalSynthesisCard');
 const finalSynthesisAgentEl = document.getElementById('finalSynthesisAgent');
 const finalSynthesisSummaryEl = document.getElementById('finalSynthesisSummary');
@@ -21,9 +29,11 @@ const finalSynthesisResponseEl = document.getElementById('finalSynthesisResponse
 const finalSynthesisRisksEl = document.getElementById('finalSynthesisRisks');
 const finalSynthesisNextStepEl = document.getElementById('finalSynthesisNextStep');
 const finalOutputEl = document.getElementById('finalOutput');
+const agentTabButtons = Array.from(document.querySelectorAll('[data-agent]'));
 
 let activeRunId = null;
 let pollTimer = null;
+let activeAgentName = 'atlas';
 
 async function request(url, options) {
   const response = await fetch(url, options);
@@ -90,7 +100,11 @@ function setRunEmptyState(message) {
   runSummaryEl.classList.add('hidden');
   artifactPanelEl.classList.add('hidden');
   artifactListEl.innerHTML = '';
+  stepsEl.classList.add('hidden');
   stepsEl.innerHTML = '';
+  agentOutputEmptyEl.textContent = message;
+  agentOutputEmptyEl.classList.remove('hidden');
+  agentOutputPanelEl.classList.add('hidden');
 }
 
 function escapeHtml(input) {
@@ -145,6 +159,69 @@ function renderFinalSynthesis(step) {
   finalSynthesisNextStepEl.innerHTML = renderOutputSection('Recommended Next Step', parsed.nextStep);
   finalOutputEl.textContent = step.output_text;
   finalOutputEl.className = 'output-raw hidden';
+}
+
+function renderAgentBody(step) {
+  const parsedOutput = parseAgentOutput(step.output_text);
+  if (parsedOutput) {
+    return `
+      <div class="step-body-layout">
+        ${renderOutputSection('Summary', parsedOutput.summary, 'output-summary')}
+        ${renderOutputSection('Response', parsedOutput.response)}
+        ${renderOutputSection('Risks / Caveats', parsedOutput.risks)}
+        ${renderOutputSection('Recommended Next Step', parsedOutput.nextStep)}
+      </div>
+    `;
+  }
+  if (step.output_text) {
+    return `
+      <div class="step-section">
+        <div class="section-label">Output</div>
+        <pre>${escapeHtml(step.output_text)}</pre>
+      </div>
+    `;
+  }
+  if (step.error_text) {
+    return `
+      <div class="step-section">
+        <div class="section-label error-label">Error</div>
+        <pre class="error-pre">${escapeHtml(step.error_text)}</pre>
+      </div>
+    `;
+  }
+  return '<div class="muted">No output recorded yet for this step.</div>';
+}
+
+function renderAgentOutput(run) {
+  const step = run.steps.find((item) => item.agent.system_name === activeAgentName) ?? run.steps[0];
+  if (!step) {
+    agentOutputEmptyEl.classList.remove('hidden');
+    agentOutputPanelEl.classList.add('hidden');
+    return;
+  }
+
+  activeAgentName = step.agent.system_name;
+  for (const button of agentTabButtons) {
+    button.classList.toggle('selected', button.dataset.agent === activeAgentName);
+  }
+
+  agentOutputEmptyEl.classList.add('hidden');
+  agentOutputPanelEl.classList.remove('hidden');
+  agentOutputNameEl.textContent = step.agent.display_name;
+  agentOutputRoleEl.textContent = step.agent.role_name;
+  agentOutputStatusEl.textContent = formatStatus(step.status);
+  agentOutputStatusEl.className = `status-badge ${statusClass(step.status)}`;
+  agentOutputStartedEl.textContent = `Started: ${formatDateTime(step.started_at)}`;
+  agentOutputCompletedEl.textContent = `Completed: ${formatDateTime(step.completed_at)}`;
+  agentOutputBodyEl.innerHTML = renderAgentBody(step);
+}
+
+for (const button of agentTabButtons) {
+  button.addEventListener('click', async () => {
+    activeAgentName = button.dataset.agent;
+    if (!activeRunId) return;
+    renderRun(await request(`/api/runs/${activeRunId}`));
+  });
 }
 
 function renderStepCard(step) {
@@ -268,10 +345,10 @@ function renderRun(run) {
 
   const mosaic = run.steps.find((step) => step.agent.system_name === 'mosaic');
   renderFinalSynthesis(mosaic);
+  renderAgentOutput(run);
 
-  for (const step of run.steps) {
-    stepsEl.appendChild(renderStepCard(step));
-  }
+  stepsEl.classList.add('hidden');
+  stepsEl.innerHTML = '';
 
   if (pollTimer) clearInterval(pollTimer);
   if (run.status !== 'completed' && run.status !== 'failed') {

@@ -73,16 +73,6 @@ export function renderIndexHtml(providerView) {
         </div>
         <div id="runError" class="error-banner hidden"></div>
       </div>
-      <div id="artifactPanel" class="artifact-panel hidden">
-        <div class="artifact-panel-header">
-          <div>
-            <h3>Run Artifacts</h3>
-            <p class="muted artifact-copy">These are the markdown and manifest files generated for the selected review run.</p>
-          </div>
-        </div>
-        <div id="artifactList" class="artifact-list"></div>
-      </div>
-      <div id="steps" class="steps-list"></div>
     </section>
     <section class="panel top-gap">
       <h2>Final Synthesis</h2>
@@ -101,6 +91,47 @@ export function renderIndexHtml(providerView) {
         </div>
       </div>
       <pre id="finalOutput" class="empty">Mosaic's final synthesis will appear here after the reviewer steps finish.</pre>
+    </section>
+    <section class="panel top-gap">
+      <div class="details-header">
+        <div>
+          <h2>Agent Outputs</h2>
+          <p class="panel-copy muted">Switch between reviewer outputs without scrolling through every agent in sequence.</p>
+        </div>
+        <div class="details-tabs">
+          <button id="tabAtlas" class="tab-button selected" data-agent="atlas">Atlas</button>
+          <button id="tabSage" class="tab-button" data-agent="sage">Sage</button>
+          <button id="tabNova" class="tab-button" data-agent="nova">Nova</button>
+          <button id="tabMosaic" class="tab-button" data-agent="mosaic">Mosaic</button>
+        </div>
+      </div>
+      <div id="agentOutputEmpty" class="empty-state small">Start a run or reopen one from history to inspect agent outputs.</div>
+      <div id="agentOutputPanel" class="step-card hidden">
+        <div class="step-header">
+          <div>
+            <div id="agentOutputName" class="step-title"></div>
+            <div id="agentOutputRole" class="muted"></div>
+          </div>
+          <span id="agentOutputStatus" class="status-badge"></span>
+        </div>
+        <div class="step-meta">
+          <span id="agentOutputStarted"></span>
+          <span id="agentOutputCompleted"></span>
+        </div>
+        <div id="agentOutputBody"></div>
+      </div>
+    </section>
+    <section class="panel top-gap">
+      <div id="artifactPanel" class="artifact-panel hidden">
+        <div class="artifact-panel-header">
+          <div>
+            <h3>Run Artifacts</h3>
+            <p class="muted artifact-copy">These are the markdown and manifest files generated for the selected review run.</p>
+          </div>
+        </div>
+        <div id="artifactList" class="artifact-list"></div>
+      </div>
+      <div id="steps" class="steps-list hidden"></div>
     </section>
   </main>
   <script type="module" src="/app.js"></script>
