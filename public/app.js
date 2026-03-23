@@ -1,6 +1,7 @@
 const questionInput = document.getElementById('question');
 const modeInput = document.getElementById('mode');
 const runButton = document.getElementById('runButton');
+const questionPanelEl = document.getElementById('questionPanel');
 const historyEl = document.getElementById('history');
 const historyToggleEl = document.getElementById('historyToggle');
 const runStateEl = document.getElementById('runState');
@@ -12,8 +13,11 @@ const runProgressEl = document.getElementById('runProgress');
 const runTimingEl = document.getElementById('runTiming');
 const runErrorEl = document.getElementById('runError');
 const artifactPanelEl = document.getElementById('artifactPanel');
+const artifactCopyEl = document.getElementById('artifactCopy');
 const artifactListEl = document.getElementById('artifactList');
+const artifactToggleEl = document.getElementById('artifactToggle');
 const stepsEl = document.getElementById('steps');
+const agentChooserEl = document.getElementById('agentChooser');
 const agentOutputEmptyEl = document.getElementById('agentOutputEmpty');
 const agentOutputPanelEl = document.getElementById('agentOutputPanel');
 const agentOutputNameEl = document.getElementById('agentOutputName');
@@ -30,12 +34,13 @@ const finalSynthesisResponseEl = document.getElementById('finalSynthesisResponse
 const finalSynthesisRisksEl = document.getElementById('finalSynthesisRisks');
 const finalSynthesisNextStepEl = document.getElementById('finalSynthesisNextStep');
 const finalOutputEl = document.getElementById('finalOutput');
-const agentTabButtons = Array.from(document.querySelectorAll('[data-agent]'));
 
 let activeRunId = null;
 let pollTimer = null;
 let activeAgentName = 'atlas';
+let currentRun = null;
 let historyExpanded = false;
+let artifactsExpanded = false;
 
 const HISTORY_PREVIEW_COUNT = 3;
 
@@ -98,14 +103,22 @@ function describeWorkflowMode(mode) {
     : 'Independent review';
 }
 
+function setQuestionPanelCompact(isCompact) {
+  questionPanelEl?.classList.toggle('compact-panel', isCompact);
+}
+
 function setRunEmptyState(message) {
+  currentRun = null;
   runStateEl.textContent = message;
   runStateEl.className = 'empty-state';
   runSummaryEl.classList.add('hidden');
   artifactPanelEl.classList.add('hidden');
+  artifactToggleEl.classList.add('hidden');
   artifactListEl.innerHTML = '';
   stepsEl.classList.add('hidden');
   stepsEl.innerHTML = '';
+  agentChooserEl.classList.add('hidden');
+  agentChooserEl.innerHTML = '';
   agentOutputEmptyEl.textContent = message;
   agentOutputEmptyEl.classList.remove('hidden');
   agentOutputPanelEl.classList.add('hidden');
@@ -165,6 +178,27 @@ function renderFinalSynthesis(step) {
   finalOutputEl.className = 'output-raw hidden';
 }
 
+function getAgentInitials(step) {
+  const source = step.agent.display_name || step.agent.system_name || '';
+  return source
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+function summarizeAgentStep(step) {
+  if (step.error_text) return step.error_text;
+  const parsed = parseAgentOutput(step.output_text);
+  if (parsed?.summary) return parsed.summary;
+  if (step.output_text) return step.output_text;
+  if (step.status === 'running' || step.status === 'preparing') return 'Response in progress.';
+  if (step.status === 'completed') return 'Completed without a structured summary.';
+  return 'Waiting for this step to run.';
+}
+
 function renderAgentBody(step) {
   const parsedOutput = parseAgentOutput(step.output_text);
   if (parsedOutput) {
@@ -199,16 +233,13 @@ function renderAgentBody(step) {
 function renderAgentOutput(run) {
   const step = run.steps.find((item) => item.agent.system_name === activeAgentName) ?? run.steps[0];
   if (!step) {
+    agentChooserEl.classList.add('hidden');
     agentOutputEmptyEl.classList.remove('hidden');
     agentOutputPanelEl.classList.add('hidden');
     return;
   }
 
   activeAgentName = step.agent.system_name;
-  for (const button of agentTabButtons) {
-    button.classList.toggle('selected', button.dataset.agent === activeAgentName);
-  }
-
   agentOutputEmptyEl.classList.add('hidden');
   agentOutputPanelEl.classList.remove('hidden');
   agentOutputNameEl.textContent = step.agent.display_name;
@@ -220,12 +251,42 @@ function renderAgentOutput(run) {
   agentOutputBodyEl.innerHTML = renderAgentBody(step);
 }
 
-for (const button of agentTabButtons) {
-  button.addEventListener('click', async () => {
-    activeAgentName = button.dataset.agent;
-    if (!activeRunId) return;
-    renderRun(await request(`/api/runs/${activeRunId}`));
-  });
+function renderAgentChooser(run) {
+  agentChooserEl.innerHTML = '';
+
+  if (!run.steps?.length) {
+    agentChooserEl.classList.add('hidden');
+    return;
+  }
+
+  agentChooserEl.classList.remove('hidden');
+
+  for (const step of run.steps) {
+    const button = document.createElement('button');
+    const preview = summarizeAgentStep(step);
+    const isSelected = step.agent.system_name === activeAgentName;
+    button.type = 'button';
+    button.className = `agent-chip ${isSelected ? 'selected' : ''} ${statusClass(step.status)}`;
+    button.innerHTML = `
+      <div class="agent-chip-top">
+        <div class="agent-chip-identity">
+          <span class="agent-avatar">${escapeHtml(getAgentInitials(step))}</span>
+          <div>
+            <div class="agent-chip-name">${escapeHtml(step.agent.display_name)}</div>
+            <div class="agent-chip-role">${escapeHtml(step.agent.role_name)}</div>
+          </div>
+        </div>
+        <span class="status-badge small ${statusClass(step.status)}">${formatStatus(step.status)}</span>
+      </div>
+      <div class="agent-chip-preview">${escapeHtml(String(preview).slice(0, 140))}</div>
+    `;
+    button.addEventListener('click', () => {
+      activeAgentName = step.agent.system_name;
+      renderAgentChooser(run);
+      renderAgentOutput(run);
+    });
+    agentChooserEl.appendChild(button);
+  }
 }
 
 function renderStepCard(step) {
@@ -305,10 +366,23 @@ function renderArtifacts(run) {
 
   if (!run.artifacts?.length) {
     artifactPanelEl.classList.add('hidden');
+    artifactToggleEl.classList.add('hidden');
     return;
   }
 
   artifactPanelEl.classList.remove('hidden');
+  artifactToggleEl.classList.remove('hidden');
+  artifactToggleEl.textContent = artifactsExpanded ? 'Hide Files' : `Show ${run.artifacts.length} Files`;
+  artifactCopyEl.textContent = artifactsExpanded
+    ? 'These are the markdown and manifest files generated for the selected review run.'
+    : `${run.artifacts.length} generated files are available for this run. Open the list only when you need the file-level details.`;
+
+  if (!artifactsExpanded) {
+    artifactListEl.classList.add('hidden');
+    return;
+  }
+
+  artifactListEl.classList.remove('hidden');
 
   for (const artifact of run.artifacts) {
     const item = document.createElement('article');
@@ -327,6 +401,8 @@ function renderArtifacts(run) {
 
 function renderRun(run) {
   activeRunId = run.id;
+  currentRun = run;
+  setQuestionPanelCompact(true);
   runStateEl.className = 'hidden';
   runSummaryEl.classList.remove('hidden');
   runMetaEl.textContent = `Review Run #${run.id}`;
@@ -349,6 +425,7 @@ function renderRun(run) {
 
   const mosaic = run.steps.find((step) => step.agent.system_name === 'mosaic');
   renderFinalSynthesis(mosaic);
+  renderAgentChooser(run);
   renderAgentOutput(run);
 
   stepsEl.classList.add('hidden');
@@ -402,12 +479,19 @@ async function loadHistory() {
       <div class="history-question">${escapeHtml(run.question_text.slice(0, 120))}</div>
     `;
     button.addEventListener('click', async () => {
+      artifactsExpanded = false;
       renderRun(await request(`/api/runs/${run.id}`));
       await loadHistory();
     });
     historyEl.appendChild(button);
   }
 }
+
+artifactToggleEl?.addEventListener('click', () => {
+  if (!currentRun) return;
+  artifactsExpanded = !artifactsExpanded;
+  renderArtifacts(currentRun);
+});
 
 historyToggleEl?.addEventListener('click', async () => {
   historyExpanded = !historyExpanded;
@@ -417,6 +501,7 @@ historyToggleEl?.addEventListener('click', async () => {
 runButton.addEventListener('click', async () => {
   runButton.disabled = true;
   runButton.textContent = 'Starting...';
+  setQuestionPanelCompact(true);
   setRunEmptyState('Starting a new run...');
 
   try {
@@ -425,6 +510,7 @@ runButton.addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ questionText: questionInput.value, workflowMode: modeInput.value }),
     });
+    artifactsExpanded = false;
     renderRun(await request(`/api/runs/${payload.runId}`));
     await loadHistory();
   } catch (error) {
@@ -437,4 +523,5 @@ runButton.addEventListener('click', async () => {
 });
 
 historyEl.innerHTML = '<div class="empty-state small">Loading run history...</div>';
+setQuestionPanelCompact(false);
 loadHistory();

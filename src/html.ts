@@ -17,7 +17,7 @@ export function renderIndexHtml(providerView) {
         <p class="muted intro">Single-user local review workflow with SQLite-backed history, markdown artifacts, and live run polling.</p>
       </div>
     </header>
-    <section class="panel">
+    <section id="questionPanel" class="panel">
       <h2>Question</h2>
       <p class="panel-copy muted">Submit one question and run the fixed four-agent review workflow. Choose the mode based on whether reviewer steps should stay independent or build on each other.</p>
       <div class="info-strip">
@@ -89,15 +89,10 @@ export function renderIndexHtml(providerView) {
       <div class="details-header">
         <div>
           <h2>Agent Outputs</h2>
-          <p class="panel-copy muted">Switch between reviewer outputs without scrolling through every agent in sequence.</p>
-        </div>
-        <div class="details-tabs">
-          <button id="tabAtlas" class="tab-button selected" data-agent="atlas">Atlas</button>
-          <button id="tabSage" class="tab-button" data-agent="sage">Sage</button>
-          <button id="tabNova" class="tab-button" data-agent="nova">Nova</button>
-          <button id="tabMosaic" class="tab-button" data-agent="mosaic">Mosaic</button>
+          <p class="panel-copy muted">See each reviewer at a glance, then open one full response at a time.</p>
         </div>
       </div>
+      <div id="agentChooser" class="agent-chooser hidden"></div>
       <div id="agentOutputEmpty" class="empty-state small">Start a run or reopen one from history to inspect agent outputs.</div>
       <div id="agentOutputPanel" class="step-card hidden">
         <div class="step-header">
@@ -119,8 +114,9 @@ export function renderIndexHtml(providerView) {
         <div class="artifact-panel-header">
           <div>
             <h3>Run Artifacts</h3>
-            <p class="muted artifact-copy">These are the markdown and manifest files generated for the selected review run.</p>
+            <p id="artifactCopy" class="muted artifact-copy">These are the markdown and manifest files generated for the selected review run.</p>
           </div>
+          <button id="artifactToggle" class="secondary-button hidden" type="button">Show Files</button>
         </div>
         <div id="artifactList" class="artifact-list"></div>
       </div>

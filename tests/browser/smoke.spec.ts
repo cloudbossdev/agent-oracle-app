@@ -20,6 +20,7 @@ test('main user flow runs a review and shows outputs', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'Final Synthesis' })).toBeVisible();
   await expect(page.locator('#finalSynthesisNextStep')).toContainText('Recommended Next Step');
+  await page.getByRole('button', { name: /show \d+ files/i }).click();
   await expect(page.locator('#artifactPanel')).toContainText('mosaic-output.md');
   await expect(page.locator('#runProgress')).toContainText('4/4 steps completed');
 });
