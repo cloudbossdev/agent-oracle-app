@@ -17,7 +17,7 @@ export function renderIndexHtml(providerView) {
         <p class="muted intro">Single-user local review workflow with SQLite-backed history, markdown artifacts, and live run polling.</p>
       </div>
     </header>
-    <div class="grid">
+    <div class="review-grid">
       <section class="panel">
         <h2>Question</h2>
         <p class="panel-copy muted">Submit one question and run the fixed four-agent review workflow. Choose the mode based on whether reviewer steps should stay independent or build on each other.</p>
@@ -51,51 +51,10 @@ export function renderIndexHtml(providerView) {
         </div>
       </section>
       <section class="panel">
-        <h2>Run History</h2>
-        <p class="panel-copy muted">Reopen earlier reviews to compare questions, statuses, and the final synthesis from each saved run.</p>
-        <div id="history" class="stack"></div>
-      </section>
-    </div>
-    <div id="workspace" class="workspace-grid top-gap">
-      <section class="panel workspace-main">
-        <h2>Current Run</h2>
-        <div id="runState" class="empty-state">No run selected yet. Start a run or reopen one from history.</div>
-        <div id="runSummary" class="run-summary hidden">
-          <div class="summary-row">
-            <div>
-              <div id="runMeta" class="summary-title"></div>
-              <div id="runQuestion" class="muted summary-question"></div>
-            </div>
-            <div id="runBadge" class="status-badge">Queued</div>
-          </div>
-          <div class="summary-row compact">
-            <div id="runProgress" class="muted"></div>
-            <div id="runTiming" class="muted"></div>
-          </div>
-          <div id="runError" class="error-banner hidden"></div>
-        </div>
-        <div id="artifactPanel" class="artifact-panel hidden">
-          <div class="artifact-panel-header">
-            <div>
-              <h3>Run Artifacts</h3>
-              <p class="muted artifact-copy">These are the markdown and manifest files generated for the selected review run.</p>
-            </div>
-          </div>
-          <div id="artifactList" class="artifact-list"></div>
-        </div>
-        <div class="details-header">
-          <div>
-            <h3>Step Details</h3>
-            <p class="muted artifact-copy">Each agent step remains available here for deeper inspection after the summary is ready.</p>
-          </div>
-        </div>
-        <div id="steps" class="steps-list"></div>
-      </section>
-      <section class="panel workspace-side">
         <div class="workspace-side-header">
           <div>
             <h2>Final Synthesis</h2>
-            <p class="panel-copy muted">Keep the main outcome in view while the run progresses or while you inspect earlier reviews.</p>
+            <p class="panel-copy muted">Keep the main outcome visible while you review the run details underneath.</p>
           </div>
         </div>
         <div id="finalSynthesisCard" class="synthesis-card hidden">
@@ -115,6 +74,58 @@ export function renderIndexHtml(providerView) {
         <pre id="finalOutput" class="empty">Mosaic's final synthesis will appear here after the reviewer steps finish.</pre>
       </section>
     </div>
+    <section id="workspace" class="panel top-gap details-panel">
+      <div class="details-header">
+        <div>
+          <h2>Review Workspace</h2>
+          <p class="panel-copy muted">See the current run first, then open step details, artifacts, or history only when you need them.</p>
+        </div>
+        <div class="details-tabs">
+          <button id="tabRun" class="tab-button selected" data-view="run">Current Run</button>
+          <button id="tabSteps" class="tab-button" data-view="steps">Step Details</button>
+          <button id="tabArtifacts" class="tab-button" data-view="artifacts">Artifacts</button>
+          <button id="tabHistory" class="tab-button" data-view="history">History</button>
+        </div>
+      </div>
+
+      <div id="runPanel" class="details-view">
+        <div id="runState" class="empty-state">No run selected yet. Start a run or reopen one from history.</div>
+        <div id="runSummary" class="run-summary hidden">
+          <div class="summary-row">
+            <div>
+              <div id="runMeta" class="summary-title"></div>
+              <div id="runQuestion" class="muted summary-question"></div>
+            </div>
+            <div id="runBadge" class="status-badge">Queued</div>
+          </div>
+          <div class="summary-row compact">
+            <div id="runProgress" class="muted"></div>
+            <div id="runTiming" class="muted"></div>
+          </div>
+          <div id="runError" class="error-banner hidden"></div>
+        </div>
+      </div>
+
+      <div id="stepsPanel" class="details-view hidden">
+        <div class="details-section-copy muted">Each agent step remains available here for deeper inspection after the summary is ready.</div>
+        <div id="steps" class="steps-list"></div>
+      </div>
+
+      <div id="artifactPanel" class="details-view artifact-panel hidden">
+        <div class="artifact-panel-header">
+          <div>
+            <h3>Run Artifacts</h3>
+            <p class="muted artifact-copy">These are the markdown and manifest files generated for the selected review run.</p>
+          </div>
+        </div>
+        <div id="artifactList" class="artifact-list"></div>
+      </div>
+
+      <div id="historyPanel" class="details-view hidden">
+        <div class="history-panel-copy muted">Reopen earlier reviews to compare questions, statuses, and the final synthesis from each saved run.</div>
+        <div id="history" class="stack"></div>
+      </div>
+    </section>
   </main>
   <script type="module" src="/app.js"></script>
 </body>

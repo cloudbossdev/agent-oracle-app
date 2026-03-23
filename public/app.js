@@ -21,7 +21,33 @@ const finalSynthesisResponseEl = document.getElementById('finalSynthesisResponse
 const finalSynthesisRisksEl = document.getElementById('finalSynthesisRisks');
 const finalSynthesisNextStepEl = document.getElementById('finalSynthesisNextStep');
 const finalOutputEl = document.getElementById('finalOutput');
-const workspaceEl = document.getElementById('workspace');
+const runPanelEl = document.getElementById('runPanel');
+const stepsPanelEl = document.getElementById('stepsPanel');
+const historyPanelEl = document.getElementById('historyPanel');
+const tabButtons = Array.from(document.querySelectorAll('[data-view]'));
+
+function setDetailsView(view) {
+  const panels = {
+    run: runPanelEl,
+    steps: stepsPanelEl,
+    artifacts: artifactPanelEl,
+    history: historyPanelEl,
+  };
+
+  for (const [panelView, panel] of Object.entries(panels)) {
+    panel.classList.toggle('hidden', panelView !== view);
+  }
+
+  for (const button of tabButtons) {
+    button.classList.toggle('selected', button.dataset.view === view);
+  }
+}
+
+for (const button of tabButtons) {
+  button.addEventListener('click', () => {
+    setDetailsView(button.dataset.view);
+  });
+}
 
 let activeRunId = null;
 let pollTimer = null;
@@ -89,9 +115,9 @@ function setRunEmptyState(message) {
   runStateEl.textContent = message;
   runStateEl.className = 'empty-state';
   runSummaryEl.classList.add('hidden');
-  artifactPanelEl.classList.add('hidden');
   artifactListEl.innerHTML = '';
   stepsEl.innerHTML = '';
+  setDetailsView('run');
 }
 
 function escapeHtml(input) {
@@ -224,11 +250,8 @@ function renderArtifacts(run) {
   artifactListEl.innerHTML = '';
 
   if (!run.artifacts?.length) {
-    artifactPanelEl.classList.add('hidden');
     return;
   }
-
-  artifactPanelEl.classList.remove('hidden');
 
   for (const artifact of run.artifacts) {
     const item = document.createElement('article');
@@ -249,6 +272,7 @@ function renderRun(run) {
   activeRunId = run.id;
   runStateEl.className = 'hidden';
   runSummaryEl.classList.remove('hidden');
+  setDetailsView('run');
   runMetaEl.textContent = `Review Run #${run.id}`;
   runQuestionEl.textContent = run.question_text;
   runBadgeEl.textContent = formatStatus(run.status);
@@ -335,7 +359,6 @@ runButton.addEventListener('click', async () => {
       body: JSON.stringify({ questionText: questionInput.value, workflowMode: modeInput.value }),
     });
     renderRun(await request(`/api/runs/${payload.runId}`));
-    workspaceEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     await loadHistory();
   } catch (error) {
     setRunEmptyState(`Unable to start run: ${error.message}`);
@@ -347,4 +370,5 @@ runButton.addEventListener('click', async () => {
 });
 
 historyEl.innerHTML = '<div class="empty-state small">Loading run history...</div>';
+setDetailsView('run');
 loadHistory();
